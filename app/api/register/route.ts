@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { db } from "../../../lib/db";
+import { isConfiguredAdminEmail } from "../../../lib/admin-users";
 
 export async function POST(req: Request) {
   try {
@@ -39,10 +40,12 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const role = isConfiguredAdminEmail(email) ? "ADMIN" : "USER";
+
     const result = db.prepare(`
       INSERT INTO users (name, email, password, role)
-      VALUES (?, ?, ?, 'USER')
-    `).run(name, email, hashedPassword);
+      VALUES (?, ?, ?, ?)
+    `).run(name, email, hashedPassword, role);
 
     return Response.json({
       message: "Kontot har skapats",

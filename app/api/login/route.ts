@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { db } from "../../../lib/db";
 import { createSession } from "../../../lib/auth";
+import { isConfiguredAdminEmail } from "../../../lib/admin-users";
 
 export async function POST(req: Request) {
   try {
@@ -38,6 +39,16 @@ export async function POST(req: Request) {
     const ok = await bcrypt.compare(password, user.password || "");
     if (!ok) {
       return Response.json({ error: "Felaktig inloggning" }, { status: 401 });
+    }
+
+    if (isConfiguredAdminEmail(user.email) && user.role !== "ADMIN") {
+      db.prepare(`
+        UPDATE users
+        SET role = 'ADMIN'
+        WHERE id = ?
+      `).run(user.id);
+
+      user.role = "ADMIN";
     }
 
     const session = createSession(user.id);
