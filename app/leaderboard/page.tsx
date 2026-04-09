@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { getLeaderboard } from "../../lib/queries";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function LeaderboardPage() {
   const rows = getLeaderboard();
 
