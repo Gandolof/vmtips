@@ -1,0 +1,306 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #111827;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.site-header {
+  background: #111827;
+  color: white;
+  border-bottom: 1px solid #1f2937;
+}
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 64px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  color: #e5e7eb;
+}
+
+.nav-links a:hover {
+  color: white;
+}
+
+.header-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #d1d5db;
+}
+
+.page-content {
+  padding-top: 28px;
+  padding-bottom: 40px;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+}
+
+.page-subtitle {
+  margin: 0 0 24px 0;
+  color: #4b5563;
+}
+
+.card {
+  background: white;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.card + .card {
+  margin-top: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.button,
+button {
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button-secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+input,
+select {
+  padding: 10px 12px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: white;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-row > * {
+  flex: 1;
+  min-width: 160px;
+}
+
+.small-text {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.status-ok {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.status-bad {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.kpi-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.kpi {
+  background: white;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 180px;
+}
+
+.kpi-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.kpi-value {
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.match-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.team-name {
+  min-width: 140px;
+  font-weight: 600;
+}
+
+.score-input {
+  width: 70px;
+}
+
+.message {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.hero-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.prediction-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.prediction-list {
+  margin-top: 16px;
+}
+
+.prediction-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.prediction-item:last-child {
+  border-bottom: none;
+}
+
+.prediction-meta {
+  font-size: 13px;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.prediction-main {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 60px 20px 60px;
+  align-items: center;
+  gap: 8px;
+}
+
+.prediction-match-link {
+  font-weight: 600;
+  color: #111827;
+  text-decoration: underline;
+}
+
+.prediction-separator {
+  text-align: center;
+  color: #6b7280;
+}
+
+.prediction-details {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.prediction-main-readonly {
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.prediction-value {
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .prediction-main {
+    grid-template-columns: minmax(0, 1fr) 56px 16px 56px;
+    font-size: 14px;
+  }
+
+  .prediction-match-link {
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  .prediction-main-readonly {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prediction-value {
+    white-space: normal;
+  }
+}
