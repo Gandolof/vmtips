@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { ensureTournamentBootstrap } from "./tournament-bootstrap";
 
 const defaultDbPath = path.join(process.cwd(), "data", "worldcup.db");
 const dbPath =
@@ -75,6 +76,7 @@ export function ensureDbInitialized() {
     );
   `);
 
+  ensureTournamentBootstrap(db);
   initialized = true;
 }
 
