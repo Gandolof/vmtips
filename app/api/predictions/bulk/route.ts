@@ -5,9 +5,10 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const userId = Number(body.userId);
+    const predictionSet = Number(body.predictionSet ?? 1);
     const predictions = Array.isArray(body.predictions) ? body.predictions : [];
 
-    if (Number.isNaN(userId)) {
+    if (Number.isNaN(userId) || Number.isNaN(predictionSet)) {
       return Response.json({ error: "Ogiltigt userId" }, { status: 400 });
     }
 
@@ -17,7 +18,8 @@ export async function POST(req: Request) {
         matchId: Number(p.matchId),
         predictedHomeScore: Number(p.predictedHomeScore),
         predictedAwayScore: Number(p.predictedAwayScore),
-      }))
+      })),
+      predictionSet
     );
 
     return Response.json({ message: "Alla tips har sparats" });

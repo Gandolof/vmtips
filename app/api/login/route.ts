@@ -33,12 +33,24 @@ export async function POST(req: Request) {
       | undefined;
 
     if (!user) {
-      return Response.json({ error: "Felaktig inloggning" }, { status: 401 });
+      return Response.json(
+        {
+          error:
+            "Felaktig inloggning. Kontakta Per eller Björn om du behöver ett nytt.",
+        },
+        { status: 401 }
+      );
     }
 
     const ok = await bcrypt.compare(password, user.password || "");
     if (!ok) {
-      return Response.json({ error: "Felaktig inloggning" }, { status: 401 });
+      return Response.json(
+        {
+          error:
+            "Felaktig inloggning. Kontakta Per eller Björn om du behöver ett nytt.",
+        },
+        { status: 401 }
+      );
     }
 
     if (isConfiguredAdminEmail(user.email) && user.role !== "ADMIN") {

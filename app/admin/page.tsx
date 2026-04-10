@@ -6,14 +6,70 @@ import { useEffect, useState } from "react";
 export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [passwords, setPasswords] = useState<Record<number, string>>({});
+  const [message, setMessage] = useState("");
+
+  async function loadUsers() {
+    const data = await fetch("/api/admin/users", { cache: "no-store" }).then((r) => r.json());
+    setUsers(Array.isArray(data) ? data : []);
+  }
 
   useEffect(() => {
     (async () => {
-      const data = await fetch("/api/me").then((r) => r.json());
+      const data = await fetch("/api/me", { cache: "no-store" }).then((r) => r.json());
       setUser(data.user);
       setLoaded(true);
+
+      if (data.user?.role === "ADMIN") {
+        await loadUsers();
+      }
     })();
   }, []);
+
+  async function resetPassword(userId: number) {
+    setMessage("");
+
+    const password = passwords[userId]?.trim() || "";
+    if (!password) {
+      setMessage("Fyll i ett nytt lösenord först.");
+      return;
+    }
+
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId, password }),
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      setPasswords((current) => ({ ...current, [userId]: "" }));
+    }
+  }
+
+  async function makeAdmin(userId: number) {
+    setMessage("");
+
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      await loadUsers();
+    }
+  }
 
   if (!loaded) {
     return <div>Laddar...</div>;
@@ -34,6 +90,8 @@ export default function AdminPage() {
       <p className="page-subtitle">
         Använd de här sidorna för att förbereda turneringen och hantera tipset.
       </p>
+
+      {message && <div className="message">{message}</div>}
 
       <div className="grid grid-2">
         <div className="card">
@@ -59,6 +117,62 @@ export default function AdminPage() {
           <p className="small-text">Mata in slutresultat och räkna om poängen.</p>
           <Link href="/results">Gå till resultat</Link>
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <h3 style={{ marginTop: 0 }}>Användare</h3>
+        <p className="small-text">
+          Se registrerade användare och återställ lösenord vid behov.
+        </p>
+
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Namn</th>
+              <th>E-post</th>
+              <th>Roll</th>
+              <th>Admin</th>
+              <th>Nytt lösenord</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((listedUser) => (
+              <tr key={listedUser.id}>
+                <td>{listedUser.name}</td>
+                <td>{listedUser.email || "-"}</td>
+                <td>{listedUser.role}</td>
+                <td>
+                  {listedUser.role === "ADMIN" ? (
+                    <span className="status-ok">Admin</span>
+                  ) : (
+                    <button onClick={() => makeAdmin(listedUser.id)}>
+                      Gör till admin
+                    </button>
+                  )}
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    placeholder="Nytt lösenord"
+                    value={passwords[listedUser.id] ?? ""}
+                    onChange={(e) =>
+                      setPasswords((current) => ({
+                        ...current,
+                        [listedUser.id]: e.target.value,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
+                  <button onClick={() => resetPassword(listedUser.id)}>
+                    Återställ lösenord
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

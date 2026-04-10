@@ -18,7 +18,7 @@ export default function RootLayout({
 
             <nav className="nav-links">
               <Link href="/login">Logga in</Link>
-              <Link href="/test">Tips</Link>
+              <Link href="/test">Tippa</Link>
               <Link href="/leaderboard">Topplista</Link>
             </nav>
 

@@ -16,7 +16,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     (async () => {
-      const data = await fetch("/api/me").then((r) => r.json());
+      const data = await fetch("/api/me", { cache: "no-store" }).then((r) => r.json());
       setUser(data.user);
       setLoaded(true);
     })();
@@ -95,55 +95,51 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          <button onClick={() => setMode("login")} disabled={mode === "login"}>
-            Logga in
-          </button>
-          <button
-            className="button-secondary"
-            onClick={() => setMode("register")}
-            disabled={mode === "register"}
-          >
-            Registrera
-          </button>
-        </div>
+        {!user && (
+          <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button onClick={() => setMode("login")} disabled={mode === "login"}>
+                Logga in
+              </button>
+              <button
+                className="button-secondary"
+                onClick={() => setMode("register")}
+                disabled={mode === "register"}
+              >
+                Registrera
+              </button>
+            </div>
 
-        <div className="form-row" style={{ marginBottom: 12 }}>
-          {mode === "register" && (
-            <input
-              placeholder="Ditt namn"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          )}
-          <input
-            placeholder="E-post"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            placeholder="Lösenord"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+            <div className="form-row" style={{ marginBottom: 12 }}>
+              {mode === "register" && (
+                <input
+                  placeholder="Ditt namn"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              )}
+              <input
+                placeholder="E-post"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <input
+                placeholder="Lösenord"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
 
-        {mode === "login" ? (
-          <button onClick={login} disabled={Boolean(user)}>
-            Logga in
-          </button>
-        ) : (
-          <button onClick={register} disabled={Boolean(user)}>
-            Skapa konto
-          </button>
+            {mode === "login" ? (
+              <button onClick={login}>Logga in</button>
+            ) : (
+              <button onClick={register}>Skapa konto</button>
+            )}
+          </>
         )}
 
         {message && <div className="message">{message}</div>}
-
-        <div style={{ marginTop: 16 }} className="small-text">
-          Efter inloggning går du till <Link href="/test">Tips</Link>.
-        </div>
       </div>
     </div>
   );

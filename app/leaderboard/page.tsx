@@ -18,16 +18,20 @@ export default async function LeaderboardPage() {
             <tr>
               <th>Placering</th>
               <th>Namn</th>
+              <th>Tips</th>
               <th>Poäng</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row: any, index: number) => (
-              <tr key={row.id}>
+              <tr key={`${row.user_id}-${row.prediction_set}`}>
                 <td>{index + 1}</td>
                 <td>
-                  <Link href={`/leaderboard/${row.id}`}>{row.name}</Link>
+                  <Link href={`/leaderboard/${row.user_id}?set=${row.prediction_set}`}>
+                    {row.name}
+                  </Link>
                 </td>
+                <td>{row.prediction_set}</td>
                 <td>{row.total_points}</td>
               </tr>
             ))}

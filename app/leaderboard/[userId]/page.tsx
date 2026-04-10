@@ -9,13 +9,17 @@ export const revalidate = 0;
 
 export default async function LeaderboardUserPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ userId: string }>;
+  searchParams: Promise<{ set?: string }>;
 }) {
   const { userId } = await params;
+  const { set } = await searchParams;
   const parsedUserId = Number(userId);
+  const predictionSet = Number(set || "1");
 
-  if (Number.isNaN(parsedUserId)) {
+  if (Number.isNaN(parsedUserId) || Number.isNaN(predictionSet)) {
     notFound();
   }
 
@@ -24,14 +28,16 @@ export default async function LeaderboardUserPage({
     notFound();
   }
 
-  const matches = getMatchesWithPredictions(parsedUserId).map((match: any) => ({
+  const matches = getMatchesWithPredictions(parsedUserId, predictionSet).map((match: any) => ({
     ...match,
     fifa_url: getFifaMatchUrl(match),
   }));
 
   return (
     <div>
-      <h1 className="page-title">{user.name}</h1>
+      <h1 className="page-title">
+        {user.name} {predictionSet === 2 ? "(Tips 2)" : "(Tips 1)"}
+      </h1>
       <p className="page-subtitle">Skrivskyddade tips och resultat.</p>
 
       <div className="card" style={{ marginBottom: 20 }}>

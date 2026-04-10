@@ -10,6 +10,8 @@ export default function TestPage() {
   const [user, setUser] = useState<any>(null);
   const [locked, setLocked] = useState(false);
   const [lockTime, setLockTime] = useState<string>("");
+  const [activePredictionSet, setActivePredictionSet] = useState<1 | 2>(1);
+  const [showSecondPredictionSet, setShowSecondPredictionSet] = useState(false);
 
   async function loadUser() {
     const data = await fetch("/api/me", { cache: "no-store" }).then((r) => r.json());
@@ -17,14 +19,17 @@ export default function TestPage() {
     return data.user;
   }
 
-  async function loadMatches(userId: number) {
-    const data = await fetch(`/api/test-matches-v2?userId=${userId}`, {
+  async function loadMatches(userId: number, predictionSet: 1 | 2) {
+    const data = await fetch(
+      `/api/test-matches-v2?userId=${userId}&predictionSet=${predictionSet}`,
+      {
       cache: "no-store",
-    }).then((r) => r.json());
-    setMatches(data);
+      }
+    ).then((r) => r.json());
+    setMatches(data.matches || []);
     setScores(
       Object.fromEntries(
-        data.map((match: any) => [
+        (data.matches || []).map((match: any) => [
           match.id,
           {
             home:
@@ -39,6 +44,8 @@ export default function TestPage() {
         ])
       )
     );
+
+    return Boolean(data.hasPredictions);
   }
 
   async function loadSettings() {
@@ -52,14 +59,23 @@ export default function TestPage() {
       const currentUser = await loadUser();
 
       if (!currentUser) {
-        setMessage("Inte inloggad. Gå till /login först.");
+        setMessage("Inte inloggad.");
         return;
       }
 
-      await loadMatches(currentUser.id);
+      const secondSetExists = await loadMatches(currentUser.id, 2);
+      setShowSecondPredictionSet(secondSetExists);
+      await loadMatches(currentUser.id, 1);
       await loadSettings();
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      await loadMatches(user.id, activePredictionSet);
+    })();
+  }, [activePredictionSet, user]);
 
   function updateScore(matchId: number, side: "home" | "away", value: string) {
     setScores((current) => ({
@@ -107,6 +123,7 @@ export default function TestPage() {
       },
       body: JSON.stringify({
         userId: user.id,
+        predictionSet: activePredictionSet,
         predictions,
       }),
     });
@@ -114,7 +131,11 @@ export default function TestPage() {
     const data = await res.json();
     setMessage(data.message || data.error);
 
-    await loadMatches(user.id);
+    if (activePredictionSet === 2) {
+      setShowSecondPredictionSet(true);
+    }
+
+    await loadMatches(user.id, activePredictionSet);
     await loadSettings();
   }
 
@@ -122,12 +143,46 @@ export default function TestPage() {
     <div>
       <h1 className="page-title">Tips</h1>
       <p className="page-subtitle">
-        {user ? `Inloggad som ${user.name}.` : "Fyll i dina tips nedan."}
+        {user
+          ? `Inloggad som ${user.name}. Du redigerar tipsuppsättning ${activePredictionSet}.`
+          : "Fyll i dina tips nedan."}
       </p>
 
       {!user && <div className="message">Du måste logga in först.</div>}
 
       <div className="card" style={{ marginBottom: 20 }}>
+        {user && (
+          <div className="hero-links" style={{ marginTop: 0, marginBottom: 16 }}>
+            <button
+              className={activePredictionSet === 1 ? "" : "button-secondary"}
+              onClick={() => setActivePredictionSet(1)}
+            >
+              Tips 1
+            </button>
+
+            {showSecondPredictionSet ? (
+              <button
+                className={activePredictionSet === 2 ? "" : "button-secondary"}
+                onClick={() => setActivePredictionSet(2)}
+              >
+                Tips 2
+              </button>
+            ) : (
+              <button
+                className="button-secondary"
+                disabled={locked}
+                onClick={() => {
+                  setShowSecondPredictionSet(true);
+                  setActivePredictionSet(2);
+                  setMessage("");
+                }}
+              >
+                Lägg till tips 2
+              </button>
+            )}
+          </div>
+        )}
+
         <div>
           <strong>Status:</strong>{" "}
           <span className={locked ? "status-bad" : "status-ok"}>

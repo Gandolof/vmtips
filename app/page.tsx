@@ -1,4 +1,8 @@
 import Link from "next/link";
+import MatchesOverview from "../components/MatchesOverview";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function HomePage() {
   return (
@@ -22,15 +26,19 @@ export default function HomePage() {
             Logga in
           </Link>
           <Link className="button" href="/test">
-            Lämna tips
+            Tippa
           </Link>
           <Link className="button" href="/leaderboard">
-            Visa topplista
+            Topplista
           </Link>
           <Link className="button-secondary button" href="/admin">
             Admin
           </Link>
         </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <MatchesOverview />
       </div>
     </div>
   );

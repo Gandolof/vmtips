@@ -30,7 +30,8 @@ export function savePrediction(
   userId: number,
   matchId: number,
   predictedHomeScore: number,
-  predictedAwayScore: number
+  predictedAwayScore: number,
+  predictionSet = 1
 ) {
   if (predictionsAreLocked()) {
     throw new Error("Tipsen är låsta.");
@@ -40,19 +41,20 @@ export function savePrediction(
     `
     INSERT INTO predictions (
       user_id,
+      prediction_set,
       match_id,
       predicted_home_score,
       predicted_away_score,
       points_awarded
     )
-    VALUES (?, ?, ?, ?, NULL)
-    ON CONFLICT(user_id, match_id)
+    VALUES (?, ?, ?, ?, ?, NULL)
+    ON CONFLICT(user_id, prediction_set, match_id)
     DO UPDATE SET
       predicted_home_score = excluded.predicted_home_score,
       predicted_away_score = excluded.predicted_away_score,
       points_awarded = NULL
   `
-  ).run(userId, matchId, predictedHomeScore, predictedAwayScore);
+  ).run(userId, predictionSet, matchId, predictedHomeScore, predictedAwayScore);
 }
 
 export function savePredictionsBulk(
@@ -61,7 +63,8 @@ export function savePredictionsBulk(
     matchId: number;
     predictedHomeScore: number;
     predictedAwayScore: number;
-  }>
+  }>,
+  predictionSet = 1
 ) {
   if (predictionsAreLocked()) {
     throw new Error("Tipsen är låsta.");
@@ -71,13 +74,14 @@ export function savePredictionsBulk(
     `
     INSERT INTO predictions (
       user_id,
+      prediction_set,
       match_id,
       predicted_home_score,
       predicted_away_score,
       points_awarded
     )
-    VALUES (?, ?, ?, ?, NULL)
-    ON CONFLICT(user_id, match_id)
+    VALUES (?, ?, ?, ?, ?, NULL)
+    ON CONFLICT(user_id, prediction_set, match_id)
     DO UPDATE SET
       predicted_home_score = excluded.predicted_home_score,
       predicted_away_score = excluded.predicted_away_score,
@@ -87,7 +91,7 @@ export function savePredictionsBulk(
 
   const tx = db.transaction(() => {
     for (const p of predictions) {
-      stmt.run(userId, p.matchId, p.predictedHomeScore, p.predictedAwayScore);
+      stmt.run(userId, predictionSet, p.matchId, p.predictedHomeScore, p.predictedAwayScore);
     }
   });
 
@@ -98,13 +102,27 @@ export function getLeaderboard() {
   return db
     .prepare(
       `
+      WITH prediction_sets AS (
+        SELECT users.id AS user_id, 1 AS prediction_set
+        FROM users
+        UNION
+        SELECT DISTINCT predictions.user_id, predictions.prediction_set
+        FROM predictions
+      )
       SELECT
-        users.id,
-        users.name,
+        users.id AS user_id,
+        prediction_sets.prediction_set,
+        CASE
+          WHEN prediction_sets.prediction_set = 1 THEN users.name
+          ELSE users.name || ' (' || prediction_sets.prediction_set || ')'
+        END AS name,
         COALESCE(SUM(predictions.points_awarded), 0) AS total_points
-      FROM users
-      LEFT JOIN predictions ON predictions.user_id = users.id
-      GROUP BY users.id, users.name
+      FROM prediction_sets
+      JOIN users ON users.id = prediction_sets.user_id
+      LEFT JOIN predictions
+        ON predictions.user_id = prediction_sets.user_id
+        AND predictions.prediction_set = prediction_sets.prediction_set
+      GROUP BY users.id, users.name, prediction_sets.prediction_set
       ORDER BY total_points DESC, users.name ASC
     `
     )
@@ -204,7 +222,7 @@ export function getAllMatches() {
     .all();
 }
 
-export function getMatchesWithPredictions(userId: number) {
+export function getMatchesWithPredictions(userId: number, predictionSet = 1) {
   return db
     .prepare(
       `
@@ -226,10 +244,27 @@ export function getMatchesWithPredictions(userId: number) {
       LEFT JOIN predictions
         ON predictions.match_id = matches.id
         AND predictions.user_id = ?
+        AND predictions.prediction_set = ?
       ORDER BY matches.kickoff_at ASC
     `
     )
-    .all(userId);
+    .all(userId, predictionSet);
+}
+
+export function userHasPredictionSet(userId: number, predictionSet: number) {
+  const row = db
+    .prepare(
+      `
+      SELECT 1
+      FROM predictions
+      WHERE user_id = ?
+        AND prediction_set = ?
+      LIMIT 1
+    `
+    )
+    .get(userId, predictionSet);
+
+  return Boolean(row);
 }
 
 export function getMatchById(matchId: number) {
@@ -292,4 +327,164 @@ export function getPredictionsForMatch(matchId: number) {
     predicted_away_score: number | null;
     points_awarded: number | null;
   }>;
+}
+
+type TournamentInfoMatch = {
+  id: number;
+  group_name: string;
+  kickoff_at: string;
+  venue: string | null;
+  status: string;
+  actual_home_score: number | null;
+  actual_away_score: number | null;
+  home_team_id: number;
+  away_team_id: number;
+  home_team_name: string;
+  away_team_name: string;
+};
+
+type TournamentInfoTeam = {
+  id: number;
+  name: string;
+  group_name: string | null;
+};
+
+export type GroupStanding = {
+  teamId: number;
+  teamName: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+};
+
+export type TournamentGroup = {
+  groupName: string;
+  standings: GroupStanding[];
+};
+
+export function getTournamentInfoData() {
+  const matches = db
+    .prepare(
+      `
+      SELECT
+        matches.id,
+        matches.group_name,
+        matches.kickoff_at,
+        matches.venue,
+        matches.status,
+        matches.actual_home_score,
+        matches.actual_away_score,
+        matches.home_team_id,
+        matches.away_team_id,
+        home.name AS home_team_name,
+        away.name AS away_team_name
+      FROM matches
+      JOIN teams home ON home.id = matches.home_team_id
+      JOIN teams away ON away.id = matches.away_team_id
+      ORDER BY matches.kickoff_at ASC
+    `
+    )
+    .all() as TournamentInfoMatch[];
+
+  const teams = db
+    .prepare(
+      `
+      SELECT id, name, group_name
+      FROM teams
+      ORDER BY group_name ASC, name ASC
+    `
+    )
+    .all() as TournamentInfoTeam[];
+
+  const groupsMap = new Map<string, Map<number, GroupStanding>>();
+
+  for (const team of teams) {
+    const groupName = team.group_name || "-";
+    const group = groupsMap.get(groupName) || new Map<number, GroupStanding>();
+
+    group.set(team.id, {
+      teamId: team.id,
+      teamName: team.name,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDifference: 0,
+      points: 0,
+    });
+
+    groupsMap.set(groupName, group);
+  }
+
+  for (const match of matches) {
+    if (match.actual_home_score === null || match.actual_away_score === null) {
+      continue;
+    }
+
+    const group = groupsMap.get(match.group_name);
+    if (!group) {
+      continue;
+    }
+
+    const home = group.get(match.home_team_id);
+    const away = group.get(match.away_team_id);
+
+    if (!home || !away) {
+      continue;
+    }
+
+    home.played += 1;
+    away.played += 1;
+
+    home.goalsFor += match.actual_home_score;
+    home.goalsAgainst += match.actual_away_score;
+    away.goalsFor += match.actual_away_score;
+    away.goalsAgainst += match.actual_home_score;
+
+    if (match.actual_home_score > match.actual_away_score) {
+      home.won += 1;
+      away.lost += 1;
+      home.points += 3;
+    } else if (match.actual_home_score < match.actual_away_score) {
+      away.won += 1;
+      home.lost += 1;
+      away.points += 3;
+    } else {
+      home.drawn += 1;
+      away.drawn += 1;
+      home.points += 1;
+      away.points += 1;
+    }
+
+    home.goalDifference = home.goalsFor - home.goalsAgainst;
+    away.goalDifference = away.goalsFor - away.goalsAgainst;
+  }
+
+  const groups = Array.from(groupsMap.entries())
+    .sort(([groupA], [groupB]) => groupA.localeCompare(groupB, "sv"))
+    .map(([groupName, standingsMap]) => ({
+      groupName,
+      standings: Array.from(standingsMap.values()).sort((teamA, teamB) => {
+        if (teamB.points !== teamA.points) return teamB.points - teamA.points;
+        if (teamB.goalDifference !== teamA.goalDifference) {
+          return teamB.goalDifference - teamA.goalDifference;
+        }
+        if (teamB.goalsFor !== teamA.goalsFor) {
+          return teamB.goalsFor - teamA.goalsFor;
+        }
+        return teamA.teamName.localeCompare(teamB.teamName, "sv");
+      }),
+    }));
+
+  return {
+    matches,
+    groups,
+  };
 }

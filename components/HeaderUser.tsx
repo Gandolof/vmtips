@@ -1,20 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function HeaderUser() {
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   async function loadUser() {
-    const data = await fetch("/api/me").then((r) => r.json());
+    const data = await fetch("/api/me", { cache: "no-store" }).then((r) => r.json());
     setUser(data.user);
   }
 
   useEffect(() => {
     loadUser();
-  }, []);
+  }, [pathname]);
 
   async function logout() {
     await fetch("/api/logout", {

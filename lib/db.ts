@@ -22,6 +22,53 @@ export const db = new Database(dbPath);
 
 let initialized = false;
 
+function ensurePredictionsTableSupportsSets() {
+  const columns = db.prepare("PRAGMA table_info(predictions)").all() as Array<{
+    name: string;
+  }>;
+  const hasPredictionSet = columns.some((column) => column.name === "prediction_set");
+
+  if (hasPredictionSet) {
+    return;
+  }
+
+  db.exec(`
+    ALTER TABLE predictions RENAME TO predictions_legacy;
+
+    CREATE TABLE predictions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      prediction_set INTEGER NOT NULL DEFAULT 1,
+      match_id INTEGER NOT NULL,
+      predicted_home_score INTEGER NOT NULL,
+      predicted_away_score INTEGER NOT NULL,
+      points_awarded INTEGER,
+      UNIQUE(user_id, prediction_set, match_id)
+    );
+
+    INSERT INTO predictions (
+      id,
+      user_id,
+      prediction_set,
+      match_id,
+      predicted_home_score,
+      predicted_away_score,
+      points_awarded
+    )
+    SELECT
+      id,
+      user_id,
+      1,
+      match_id,
+      predicted_home_score,
+      predicted_away_score,
+      points_awarded
+    FROM predictions_legacy;
+
+    DROP TABLE predictions_legacy;
+  `);
+}
+
 export function ensureDbInitialized() {
   if (initialized) return;
 
@@ -76,6 +123,7 @@ export function ensureDbInitialized() {
     );
   `);
 
+  ensurePredictionsTableSupportsSets();
   ensureTournamentBootstrap(db);
   initialized = true;
 }
