@@ -12,6 +12,7 @@ const dbPath =
       ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "worldcup.db")
       : defaultDbPath);
 const dbDir = path.dirname(dbPath);
+export { dbPath, dbDir };
 
 // Ensure the target database directory exists both locally and on Railway.
 if (!fs.existsSync(dbDir)) {

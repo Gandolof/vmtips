@@ -7,12 +7,18 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [latestBackup, setLatestBackup] = useState<any>(null);
   const [passwords, setPasswords] = useState<Record<number, string>>({});
   const [message, setMessage] = useState("");
 
   async function loadUsers() {
     const data = await fetch("/api/admin/users", { cache: "no-store" }).then((r) => r.json());
     setUsers(Array.isArray(data) ? data : []);
+  }
+
+  async function loadBackupInfo() {
+    const data = await fetch("/api/admin/backup", { cache: "no-store" }).then((r) => r.json());
+    setLatestBackup(data.latestBackup ?? null);
   }
 
   useEffect(() => {
@@ -23,6 +29,7 @@ export default function AdminPage() {
 
       if (data.user?.role === "ADMIN") {
         await loadUsers();
+        await loadBackupInfo();
       }
     })();
   }, []);
@@ -71,6 +78,49 @@ export default function AdminPage() {
     }
   }
 
+  async function createBackup() {
+    setMessage("");
+
+    const res = await fetch("/api/admin/backup", {
+      method: "POST",
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      setLatestBackup(data.backup ?? null);
+    }
+  }
+
+  function downloadLatestBackup() {
+    window.location.href = "/api/admin/backup?download=1";
+  }
+
+  async function restoreLatestBackup() {
+    setMessage("");
+
+    const confirmed = window.confirm(
+      "Är du säker på att du vill återställa senaste backupen? Nuvarande data skrivs över."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const res = await fetch("/api/admin/backup", {
+      method: "PUT",
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      await loadUsers();
+      await loadBackupInfo();
+    }
+  }
+
   if (!loaded) {
     return <div>Laddar...</div>;
   }
@@ -116,6 +166,43 @@ export default function AdminPage() {
           <h3>Resultat</h3>
           <p className="small-text">Mata in slutresultat och räkna om poängen.</p>
           <Link href="/results">Gå till resultat</Link>
+        </div>
+
+        <div className="card">
+          <h3>Backup</h3>
+          <p className="small-text">
+            Skapa, ladda ner och återställ senaste databackupen.
+          </p>
+
+          <div className="small-text" style={{ marginBottom: 12 }}>
+            {latestBackup ? (
+              <>
+                Senaste backup: {latestBackup.filename}
+                <br />
+                Skapad: {new Date(latestBackup.createdAt).toLocaleString("sv-SE")}
+              </>
+            ) : (
+              "Ingen backup skapad ännu."
+            )}
+          </div>
+
+          <div className="hero-links" style={{ marginTop: 0 }}>
+            <button onClick={createBackup}>Skapa backup</button>
+            <button
+              className="button-secondary"
+              onClick={downloadLatestBackup}
+              disabled={!latestBackup}
+            >
+              Ladda ner senaste backup
+            </button>
+            <button
+              className="button-secondary"
+              onClick={restoreLatestBackup}
+              disabled={!latestBackup}
+            >
+              Återställ senaste backup
+            </button>
+          </div>
         </div>
       </div>
 
