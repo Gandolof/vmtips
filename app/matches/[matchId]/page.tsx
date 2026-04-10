@@ -116,10 +116,6 @@ export default async function MatchInfoPage({
                 );
               })}
             </div>
-
-            <div className="small-text" style={{ marginTop: 8 }}>
-              Källa: <a href={broadcastInfo.sourceUrl} target="_blank" rel="noreferrer">TVMatchen</a>
-            </div>
           </div>
         )}
       </div>
