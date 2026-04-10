@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import TournamentStandings from "../../../components/TournamentStandings";
 import { formatDateTimeSv } from "../../../lib/date-format";
 import { getFifaMatchUrl } from "../../../lib/fifa-match-links";
-import { getMatchById, getTournamentInfoData } from "../../../lib/queries";
+import {
+  getMatchById,
+  getPredictionsForMatch,
+  getTournamentInfoData,
+} from "../../../lib/queries";
 import { getBroadcastInfoForMatch } from "../../../lib/tv-broadcast";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +31,7 @@ export default async function MatchInfoPage({
   }
 
   const { groups, matches } = getTournamentInfoData();
+  const predictions = getPredictionsForMatch(parsedMatchId);
   const fifaUrl = getFifaMatchUrl(match);
   const broadcastInfo = await getBroadcastInfoForMatch(match);
   const groupMatches = matches.filter((item) => item.group_name === match.group_name);
@@ -99,6 +104,34 @@ export default async function MatchInfoPage({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="card tournament-highlight-card" style={{ marginBottom: 20 }}>
+        <h3 className="group-title">Andras tips</h3>
+
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Namn</th>
+              <th>Tips</th>
+              <th>Poäng</th>
+            </tr>
+          </thead>
+          <tbody>
+            {predictions.map((prediction) => (
+              <tr key={prediction.user_id}>
+                <td>{prediction.name}</td>
+                <td>
+                  {prediction.predicted_home_score !== null &&
+                  prediction.predicted_away_score !== null
+                    ? `${prediction.predicted_home_score}-${prediction.predicted_away_score}`
+                    : "Inget tips"}
+                </td>
+                <td>{prediction.points_awarded ?? "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div className="card tournament-highlight-card">
