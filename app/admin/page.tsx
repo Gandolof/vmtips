@@ -175,7 +175,7 @@ export default function AdminPage() {
           <Link href="/results">Gå till resultat</Link>
         </div>
 
-        <div className="card">
+        <div className="card" style={{ gridRow: "span 2" }}>
           <h3>Backup</h3>
           <p className="small-text">
             Skapa backup och återställ någon av de fem senaste databackuperna.
