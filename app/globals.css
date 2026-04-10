@@ -539,10 +539,31 @@ select {
   color: #ffffff;
 }
 
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-backup-card {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
 @media (max-width: 720px) {
   .matches-page-layout {
     grid-template-columns: 1fr;
     gap: 20px;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-backup-card {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .page-title {

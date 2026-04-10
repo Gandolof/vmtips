@@ -150,7 +150,7 @@ export default function AdminPage() {
 
       {message && <div className="message">{message}</div>}
 
-      <div className="grid grid-2">
+      <div className="admin-grid">
         <div className="card">
           <h3>Lag</h3>
           <p className="small-text">Skapa lagen som används i gruppspelet.</p>
@@ -175,7 +175,7 @@ export default function AdminPage() {
           <Link href="/results">Gå till resultat</Link>
         </div>
 
-        <div className="card" style={{ gridRow: "span 2" }}>
+        <div className="card admin-backup-card">
           <h3>Backup</h3>
           <p className="small-text">
             Skapa backup och återställ någon av de fem senaste databackuperna.
