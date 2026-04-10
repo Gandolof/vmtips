@@ -18,7 +18,6 @@ export default async function LeaderboardPage() {
             <tr>
               <th>Placering</th>
               <th>Namn</th>
-              <th>Tips</th>
               <th>Poäng</th>
             </tr>
           </thead>
@@ -31,7 +30,6 @@ export default async function LeaderboardPage() {
                     {row.name}
                   </Link>
                 </td>
-                <td>{row.prediction_set}</td>
                 <td>{row.total_points}</td>
               </tr>
             ))}
