@@ -3,6 +3,7 @@ import path from "path";
 import { db, dbDir, dbPath } from "./db";
 
 const backupsDir = path.join(dbDir, "backups");
+const MAX_BACKUPS = 5;
 
 type BackupEntry = {
   filename: string;
@@ -22,7 +23,7 @@ function buildBackupFilename() {
   return `worldcup-backup-${stamp}.db`;
 }
 
-function getBackupEntries() {
+export function getBackupEntries() {
   ensureBackupsDir();
 
   return fs
@@ -46,6 +47,14 @@ export function getLatestBackup() {
   return getBackupEntries()[0] || null;
 }
 
+function trimOldBackups() {
+  const backups = getBackupEntries();
+
+  for (const backup of backups.slice(MAX_BACKUPS)) {
+    fs.unlinkSync(backup.fullPath);
+  }
+}
+
 export function createBackup() {
   ensureBackupsDir();
 
@@ -61,25 +70,33 @@ export function createBackup() {
   fs.copyFileSync(dbPath, fullPath);
 
   const stats = fs.statSync(fullPath);
-  return {
+  const backup = {
     filename,
     fullPath,
     createdAt: stats.mtime.toISOString(),
     size: stats.size,
   } satisfies BackupEntry;
+
+  trimOldBackups();
+
+  return backup;
 }
 
 export function readBackupFile(fullPath: string) {
   return fs.readFileSync(fullPath);
 }
 
-export function attachAndRestoreFromLatestBackup() {
-  const latestBackup = getLatestBackup();
-  if (!latestBackup) {
-    throw new Error("Det finns ingen backup att återställa.");
+export function getBackupByFilename(filename: string) {
+  return getBackupEntries().find((backup) => backup.filename === filename) || null;
+}
+
+export function attachAndRestoreFromBackup(filename: string) {
+  const backupToRestore = getBackupByFilename(filename);
+  if (!backupToRestore) {
+    throw new Error("Backupen hittades inte.");
   }
 
-  db.exec(`ATTACH DATABASE '${latestBackup.fullPath.replace(/'/g, "''")}' AS backup`);
+  db.exec(`ATTACH DATABASE '${backupToRestore.fullPath.replace(/'/g, "''")}' AS backup`);
 
   try {
     const tables = [
@@ -119,5 +136,5 @@ export function attachAndRestoreFromLatestBackup() {
     db.exec("DETACH DATABASE backup");
   }
 
-  return latestBackup;
+  return backupToRestore;
 }

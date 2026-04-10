@@ -7,6 +7,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [backups, setBackups] = useState<any[]>([]);
   const [latestBackup, setLatestBackup] = useState<any>(null);
   const [passwords, setPasswords] = useState<Record<number, string>>({});
   const [message, setMessage] = useState("");
@@ -19,6 +20,7 @@ export default function AdminPage() {
   async function loadBackupInfo() {
     const data = await fetch("/api/admin/backup", { cache: "no-store" }).then((r) => r.json());
     setLatestBackup(data.latestBackup ?? null);
+    setBackups(Array.isArray(data.backups) ? data.backups : []);
   }
 
   useEffect(() => {
@@ -90,18 +92,19 @@ export default function AdminPage() {
 
     if (res.ok) {
       setLatestBackup(data.backup ?? null);
+      setBackups(Array.isArray(data.backups) ? data.backups : []);
     }
   }
 
-  function downloadLatestBackup() {
-    window.location.href = "/api/admin/backup?download=1";
+  function downloadBackup(filename: string) {
+    window.location.href = `/api/admin/backup?download=1&filename=${encodeURIComponent(filename)}`;
   }
 
-  async function restoreLatestBackup() {
+  async function restoreBackup(filename: string) {
     setMessage("");
 
     const confirmed = window.confirm(
-      "Är du säker på att du vill återställa senaste backupen? Nuvarande data skrivs över."
+      `Är du säker på att du vill återställa ${filename}? Nuvarande data skrivs över.`
     );
 
     if (!confirmed) {
@@ -110,6 +113,10 @@ export default function AdminPage() {
 
     const res = await fetch("/api/admin/backup", {
       method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ filename }),
     });
 
     const data = await res.json();
@@ -171,7 +178,7 @@ export default function AdminPage() {
         <div className="card">
           <h3>Backup</h3>
           <p className="small-text">
-            Skapa, ladda ner och återställ senaste databackupen.
+            Skapa backup och återställ någon av de fem senaste databackuperna.
           </p>
 
           <div className="small-text" style={{ marginBottom: 12 }}>
@@ -188,21 +195,44 @@ export default function AdminPage() {
 
           <div className="hero-links" style={{ marginTop: 0 }}>
             <button onClick={createBackup}>Skapa backup</button>
-            <button
-              className="button-secondary"
-              onClick={downloadLatestBackup}
-              disabled={!latestBackup}
-            >
-              Ladda ner senaste backup
-            </button>
-            <button
-              className="button-secondary"
-              onClick={restoreLatestBackup}
-              disabled={!latestBackup}
-            >
-              Återställ senaste backup
-            </button>
           </div>
+
+          {backups.length > 0 && (
+            <table className="table" style={{ marginTop: 16 }}>
+              <thead>
+                <tr>
+                  <th>Fil</th>
+                  <th>Skapad</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {backups.map((backup) => (
+                  <tr key={backup.filename}>
+                    <td>{backup.filename}</td>
+                    <td>{new Date(backup.createdAt).toLocaleString("sv-SE")}</td>
+                    <td>
+                      <button
+                        className="button-secondary"
+                        onClick={() => downloadBackup(backup.filename)}
+                      >
+                        Ladda ner
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="button-secondary"
+                        onClick={() => restoreBackup(backup.filename)}
+                      >
+                        Återställ
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
