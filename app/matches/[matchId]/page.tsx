@@ -31,7 +31,25 @@ export default async function MatchInfoPage({
   }
 
   const { groups, matches } = getTournamentInfoData();
-  const predictions = getPredictionsForMatch(parsedMatchId);
+  const predictions = getPredictionsForMatch(parsedMatchId).sort((a, b) => {
+    const pointsA = a.points_awarded ?? -1;
+    const pointsB = b.points_awarded ?? -1;
+
+    if (pointsB !== pointsA) {
+      return pointsB - pointsA;
+    }
+
+    const hasPredictionA =
+      a.predicted_home_score !== null && a.predicted_away_score !== null ? 1 : 0;
+    const hasPredictionB =
+      b.predicted_home_score !== null && b.predicted_away_score !== null ? 1 : 0;
+
+    if (hasPredictionB !== hasPredictionA) {
+      return hasPredictionB - hasPredictionA;
+    }
+
+    return a.name.localeCompare(b.name, "sv");
+  });
   const fifaUrl = getFifaMatchUrl(match);
   const broadcastInfo = await getBroadcastInfoForMatch(match);
   const groupMatches = matches.filter((item) => item.group_name === match.group_name);
