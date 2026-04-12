@@ -37,6 +37,34 @@ export function savePrediction(
     throw new Error("Tipsen är låsta.");
   }
 
+  const match = db
+    .prepare(
+      `
+      SELECT actual_home_score, actual_away_score
+      FROM matches
+      WHERE id = ?
+      LIMIT 1
+    `
+    )
+    .get(matchId) as
+    | {
+        actual_home_score: number | null;
+        actual_away_score: number | null;
+      }
+    | undefined;
+
+  const pointsAwarded =
+    match &&
+    match.actual_home_score !== null &&
+    match.actual_away_score !== null
+      ? calculatePoints(
+          predictedHomeScore,
+          predictedAwayScore,
+          match.actual_home_score,
+          match.actual_away_score
+        )
+      : null;
+
   db.prepare(
     `
     INSERT INTO predictions (
@@ -47,14 +75,21 @@ export function savePrediction(
       predicted_away_score,
       points_awarded
     )
-    VALUES (?, ?, ?, ?, ?, NULL)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id, prediction_set, match_id)
     DO UPDATE SET
       predicted_home_score = excluded.predicted_home_score,
       predicted_away_score = excluded.predicted_away_score,
-      points_awarded = NULL
+      points_awarded = excluded.points_awarded
   `
-  ).run(userId, predictionSet, matchId, predictedHomeScore, predictedAwayScore);
+  ).run(
+    userId,
+    predictionSet,
+    matchId,
+    predictedHomeScore,
+    predictedAwayScore,
+    pointsAwarded
+  );
 }
 
 export function savePredictionsBulk(
@@ -70,6 +105,28 @@ export function savePredictionsBulk(
     throw new Error("Tipsen är låsta.");
   }
 
+  const matchIds = predictions.map((prediction) => prediction.matchId);
+  const matchResultRows =
+    matchIds.length > 0
+      ? (db
+          .prepare(
+            `
+            SELECT id, actual_home_score, actual_away_score
+            FROM matches
+            WHERE id IN (${matchIds.map(() => "?").join(",")})
+          `
+          )
+          .all(...matchIds) as Array<{
+          id: number;
+          actual_home_score: number | null;
+          actual_away_score: number | null;
+        }>)
+      : [];
+
+  const matchResultsById = new Map(
+    matchResultRows.map((row) => [row.id, row] as const)
+  );
+
   const stmt = db.prepare(
     `
     INSERT INTO predictions (
@@ -80,18 +137,38 @@ export function savePredictionsBulk(
       predicted_away_score,
       points_awarded
     )
-    VALUES (?, ?, ?, ?, ?, NULL)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id, prediction_set, match_id)
     DO UPDATE SET
       predicted_home_score = excluded.predicted_home_score,
       predicted_away_score = excluded.predicted_away_score,
-      points_awarded = NULL
+      points_awarded = excluded.points_awarded
   `
   );
 
   const tx = db.transaction(() => {
     for (const p of predictions) {
-      stmt.run(userId, predictionSet, p.matchId, p.predictedHomeScore, p.predictedAwayScore);
+      const match = matchResultsById.get(p.matchId);
+      const pointsAwarded =
+        match &&
+        match.actual_home_score !== null &&
+        match.actual_away_score !== null
+          ? calculatePoints(
+              p.predictedHomeScore,
+              p.predictedAwayScore,
+              match.actual_home_score,
+              match.actual_away_score
+            )
+          : null;
+
+      stmt.run(
+        userId,
+        predictionSet,
+        p.matchId,
+        p.predictedHomeScore,
+        p.predictedAwayScore,
+        pointsAwarded
+      );
     }
   });
 
@@ -309,7 +386,11 @@ export function getPredictionsForMatch(matchId: number) {
       `
       SELECT
         users.id AS user_id,
-        users.name,
+        predictions.prediction_set,
+        CASE
+          WHEN predictions.prediction_set IS NULL OR predictions.prediction_set = 1 THEN users.name
+          ELSE users.name || ' (' || predictions.prediction_set || ')'
+        END AS name,
         predictions.predicted_home_score,
         predictions.predicted_away_score,
         predictions.points_awarded
@@ -317,11 +398,15 @@ export function getPredictionsForMatch(matchId: number) {
       LEFT JOIN predictions
         ON predictions.user_id = users.id
         AND predictions.match_id = ?
-      ORDER BY users.name ASC
+      ORDER BY
+        CASE WHEN predictions.prediction_set IS NULL THEN 1 ELSE 0 END ASC,
+        users.name ASC,
+        predictions.prediction_set ASC
     `
     )
     .all(matchId) as Array<{
     user_id: number;
+    prediction_set: number | null;
     name: string;
     predicted_home_score: number | null;
     predicted_away_score: number | null;

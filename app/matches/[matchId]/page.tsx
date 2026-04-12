@@ -133,7 +133,7 @@ export default async function MatchInfoPage({
           </thead>
           <tbody>
             {predictions.map((prediction) => (
-              <tr key={prediction.user_id}>
+              <tr key={`${prediction.user_id}-${prediction.prediction_set ?? 0}`}>
                 <td>{prediction.name}</td>
                 <td>
                   {prediction.predicted_home_score !== null &&
