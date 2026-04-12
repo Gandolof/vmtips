@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { calculatePoints } from "./scoring";
+import { displayTeamName } from "./team-names";
 
 export function getSettings() {
   return db
@@ -278,7 +279,7 @@ export function saveMatchResult(
 }
 
 export function getAllMatches() {
-  return db
+  return (db
     .prepare(
       `
       SELECT
@@ -296,11 +297,15 @@ export function getAllMatches() {
       ORDER BY matches.kickoff_at ASC
     `
     )
-    .all();
+    .all() as Array<any>).map((match) => ({
+    ...match,
+    home_team_name: displayTeamName(match.home_team_name),
+    away_team_name: displayTeamName(match.away_team_name),
+  }));
 }
 
 export function getMatchesWithPredictions(userId: number, predictionSet = 1) {
-  return db
+  return (db
     .prepare(
       `
       SELECT
@@ -325,7 +330,11 @@ export function getMatchesWithPredictions(userId: number, predictionSet = 1) {
       ORDER BY matches.kickoff_at ASC
     `
     )
-    .all(userId, predictionSet);
+    .all(userId, predictionSet) as Array<any>).map((match) => ({
+    ...match,
+    home_team_name: displayTeamName(match.home_team_name),
+    away_team_name: displayTeamName(match.away_team_name),
+  }));
 }
 
 export function userHasPredictionSet(userId: number, predictionSet: number) {
@@ -345,7 +354,7 @@ export function userHasPredictionSet(userId: number, predictionSet: number) {
 }
 
 export function getMatchById(matchId: number) {
-  return db
+  const match = db
     .prepare(
       `
       SELECT
@@ -378,6 +387,14 @@ export function getMatchById(matchId: number) {
         away_team_name: string;
       }
     | undefined;
+
+  if (!match) return undefined;
+
+  return {
+    ...match,
+    home_team_name: displayTeamName(match.home_team_name),
+    away_team_name: displayTeamName(match.away_team_name),
+  };
 }
 
 export function getPredictionsForMatch(matchId: number) {
@@ -492,7 +509,7 @@ export function getTournamentInfoData() {
 
     group.set(team.id, {
       teamId: team.id,
-      teamName: team.name,
+      teamName: displayTeamName(team.name),
       played: 0,
       won: 0,
       drawn: 0,
@@ -567,7 +584,11 @@ export function getTournamentInfoData() {
     }));
 
   return {
-    matches,
+    matches: matches.map((match) => ({
+      ...match,
+      home_team_name: displayTeamName(match.home_team_name),
+      away_team_name: displayTeamName(match.away_team_name),
+    })),
     groups,
   };
 }

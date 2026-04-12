@@ -1,5 +1,6 @@
 import { db } from "../../../../lib/db";
 import { requireAdminFromRequest } from "../../../../lib/require-admin";
+import { displayTeamName } from "../../../../lib/team-names";
 
 export async function GET(req: Request) {
   const auth = requireAdminFromRequest(req);
@@ -16,7 +17,12 @@ export async function GET(req: Request) {
       )
       .all();
 
-    return Response.json(teams);
+    return Response.json(
+      (teams as Array<any>).map((team) => ({
+        ...team,
+        name: displayTeamName(team.name),
+      }))
+    );
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Kunde inte läsa in lagen" },

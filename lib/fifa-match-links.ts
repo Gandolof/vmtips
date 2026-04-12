@@ -1,4 +1,5 @@
 import { createRequire } from "module";
+import { toCanonicalTeamName } from "./team-names";
 
 const require = createRequire(import.meta.url);
 const fifaMatchesData = require("../fifa_wc2026_matches.json");
@@ -23,23 +24,12 @@ type FifaMatch = {
 const FIFA_FIXTURES_URL =
   "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures?country=&wtw-filter=ALL";
 
-const nameMap: Record<string, string> = {
-  "Bosnia and Herzegovina": "Bosnia-Herzegovina",
-  "Czech Republic": "Czechia",
-  Curacao: "Curaçao",
-  "DR Congo": "Congo DR",
-  Iran: "IR Iran",
-  "South Korea": "Korea Republic",
-  Turkey: "Türkiye",
-  "United States": "USA",
-};
-
 function getText(items?: Array<{ Description: string }> | null) {
   return items && items.length > 0 ? items[0].Description : "";
 }
 
 function normalizeName(name: string) {
-  return (nameMap[name] || name).trim().toLowerCase();
+  return toCanonicalTeamName(name).trim().toLowerCase();
 }
 
 function buildKey(kickoffAt: string, homeTeam: string, awayTeam: string, venue: string) {

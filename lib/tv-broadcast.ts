@@ -19,62 +19,13 @@ type TvMatchenFixture = {
 
 export type MatchBroadcastInfo = {
   channels: TvMatchenChannel[];
-  sourceUrl: string;
 };
 
 const TVMATCHEN_URL = "https://www.tvmatchen.nu/fotboll/fotbolls-vm";
-
-const teamNameMap: Record<string, string> = {
-  "United States": "USA",
-  "South Korea": "Sydkorea",
-  Sweden: "Sverige",
-  Norway: "Norge",
-  Denmark: "Danmark",
-  Germany: "Tyskland",
-  Spain: "Spanien",
-  France: "Frankrike",
-  Belgium: "Belgien",
-  Croatia: "Kroatien",
-  Morocco: "Marocko",
-  Paraguay: "Paraguay",
-  Mexico: "Mexiko",
-  Canada: "Kanada",
-  Switzerland: "Schweiz",
-  Brazil: "Brasilien",
-  Scotland: "Skottland",
-  Australia: "Australien",
-  Turkey: "Turkiet",
-  Netherlands: "Nederländerna",
-  Japan: "Japan",
-  Ecuador: "Ecuador",
-  Tunisia: "Tunisien",
-  "Saudi Arabia": "Saudiarabien",
-  Uruguay: "Uruguay",
-  Iran: "Iran",
-  "New Zealand": "Nya Zeeland",
-  Egypt: "Egypten",
-  Argentina: "Argentina",
-  Austria: "Österrike",
-  Portugal: "Portugal",
-  England: "England",
-  Ghana: "Ghana",
-  Panama: "Panama",
-  Colombia: "Colombia",
-  Qatar: "Qatar",
-  Haiti: "Haiti",
-  Curacao: "Curaçao",
-  "Ivory Coast": "Elfenbenskusten",
-  "Bosnia and Herzegovina": "Bosnien-Hercegovina",
-  "Czech Republic": "Tjeckien",
-  "Cape Verde": "Kap Verde",
-  Iraq: "Irak",
-  Algeria: "Algeriet",
-  Jordan: "Jordanien",
-  Uzbekistan: "Uzbekistan",
-  Senegal: "Senegal",
-  "DR Congo": "DR Kongo",
-  "South Africa": "Sydafrika",
-};
+import {
+  displayTeamName,
+  normalizeTeamNameForMatching,
+} from "./team-names";
 
 function normalizeText(value: string | null | undefined) {
   return (value || "")
@@ -91,16 +42,8 @@ function normalizeVenue(value: string | null | undefined) {
   return normalizeText(value);
 }
 
-function normalizeTeamName(value: string) {
-  return normalizeText(teamNameMap[value] || value);
-}
-
-function getTvMatchenDisplayName(value: string) {
-  return teamNameMap[value] || value;
-}
-
 function slugifyTvMatchenName(value: string) {
-  return getTvMatchenDisplayName(value)
+  return displayTeamName(value)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/&/g, "och")
@@ -229,20 +172,20 @@ export async function getBroadcastInfoForMatch(match: {
   const fixtures = await loadTvMatchenFixtures();
   const targetDate = new Date(match.kickoff_at).toISOString();
   const targetVenue = normalizeVenue(match.venue);
-  const targetHome = normalizeTeamName(match.home_team_name);
-  const targetAway = normalizeTeamName(match.away_team_name);
+  const targetHome = normalizeTeamNameForMatching(match.home_team_name);
+  const targetAway = normalizeTeamNameForMatching(match.away_team_name);
 
   const fixture =
     fixtures.find(
       (item) =>
         item.date === targetDate &&
-        normalizeVenue(item.venue) === targetVenue
+        normalizeTeamNameForMatching(item.home_team) === targetHome &&
+        normalizeTeamNameForMatching(item.visiting_team) === targetAway
     ) ||
     fixtures.find(
       (item) =>
         item.date === targetDate &&
-        normalizeTeamName(item.home_team) === targetHome &&
-        normalizeTeamName(item.visiting_team) === targetAway
+        normalizeVenue(item.venue) === targetVenue
     ) ||
     (await loadTvMatchenMatchPageForMatch(match));
 
@@ -252,6 +195,5 @@ export async function getBroadcastInfoForMatch(match: {
 
   return {
     channels: fixture.channels.map(normalizeChannel),
-    sourceUrl: TVMATCHEN_URL,
   } satisfies MatchBroadcastInfo;
 }
