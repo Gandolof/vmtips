@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -61,6 +61,19 @@ export default function LoginPage() {
     }
   }
 
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (user) return;
+
+    if (mode === "login") {
+      await login();
+      return;
+    }
+
+    await register();
+  }
+
   if (!loaded) {
     return <div>Laddar...</div>;
   }
@@ -76,7 +89,7 @@ export default function LoginPage() {
           : "Skapa ett personligt konto för tipset."}
       </p>
 
-      <div className="card" style={{ maxWidth: 520 }}>
+      <form className="card" style={{ maxWidth: 520 }} onSubmit={handleSubmit}>
         {user && (
           <div style={{ marginBottom: 16 }}>
             <div className="message" style={{ marginTop: 0 }}>
@@ -98,10 +111,15 @@ export default function LoginPage() {
         {!user && (
           <>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => setMode("login")} disabled={mode === "login"}>
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                disabled={mode === "login"}
+              >
                 Logga in
               </button>
               <button
+                type="button"
                 className="button-secondary"
                 onClick={() => setMode("register")}
                 disabled={mode === "register"}
@@ -132,15 +150,15 @@ export default function LoginPage() {
             </div>
 
             {mode === "login" ? (
-              <button onClick={login}>Logga in</button>
+              <button type="submit">Logga in</button>
             ) : (
-              <button onClick={register}>Skapa konto</button>
+              <button type="submit">Skapa konto</button>
             )}
           </>
         )}
 
         {message && <div className="message">{message}</div>}
-      </div>
+      </form>
     </div>
   );
 }

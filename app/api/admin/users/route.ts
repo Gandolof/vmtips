@@ -96,9 +96,13 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const userId = Number(body.userId);
+    const role = String(body.role || "").trim().toUpperCase();
 
-    if (Number.isNaN(userId)) {
-      return Response.json({ error: "Användare måste anges" }, { status: 400 });
+    if (Number.isNaN(userId) || !["ADMIN", "USER"].includes(role)) {
+      return Response.json(
+        { error: "Användare och giltig roll måste anges" },
+        { status: 400 }
+      );
     }
 
     const existing = db
@@ -121,19 +125,23 @@ export async function PATCH(req: Request) {
       return Response.json({ error: "Användaren hittades inte" }, { status: 404 });
     }
 
-    if (existing.role === "ADMIN") {
-      return Response.json({ message: "Användaren är redan admin" });
+    if (existing.role === role) {
+      return Response.json({
+        message: role === "ADMIN" ? "Användaren är redan admin" : "Användaren är redan vanlig användare",
+      });
     }
 
     db.prepare(
       `
       UPDATE users
-      SET role = 'ADMIN'
+      SET role = ?
       WHERE id = ?
     `
-    ).run(userId);
+    ).run(role, userId);
 
-    return Response.json({ message: "Användaren är nu admin" });
+    return Response.json({
+      message: role === "ADMIN" ? "Användaren är nu admin" : "Admin-behörigheten togs bort",
+    });
   } catch (error) {
     return Response.json(
       {

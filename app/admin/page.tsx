@@ -61,7 +61,7 @@ export default function AdminPage() {
     }
   }
 
-  async function makeAdmin(userId: number) {
+  async function updateUserRole(userId: number, role: "ADMIN" | "USER") {
     setMessage("");
 
     const res = await fetch("/api/admin/users", {
@@ -69,7 +69,7 @@ export default function AdminPage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ userId, role }),
     });
 
     const data = await res.json();
@@ -261,9 +261,14 @@ export default function AdminPage() {
                 <td>{listedUser.role}</td>
                 <td>
                   {listedUser.role === "ADMIN" ? (
-                    <span className="status-ok">Admin</span>
+                    <button
+                      className="button-secondary"
+                      onClick={() => updateUserRole(listedUser.id, "USER")}
+                    >
+                      Ta bort admin
+                    </button>
                   ) : (
-                    <button onClick={() => makeAdmin(listedUser.id)}>
+                    <button onClick={() => updateUserRole(listedUser.id, "ADMIN")}>
                       Gör till admin
                     </button>
                   )}
