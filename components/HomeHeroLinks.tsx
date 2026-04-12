@@ -29,9 +29,11 @@ export default function HomeHeroLinks() {
       <Link className="button" href="/leaderboard">
         Topplista
       </Link>
-      <Link className="button-secondary button" href="/admin">
-        Admin
-      </Link>
+      {user?.role === "ADMIN" && (
+        <Link className="button-secondary button" href="/admin">
+          Admin
+        </Link>
+      )}
     </div>
   );
 }
