@@ -61,7 +61,7 @@ export default async function MatchInfoPage({
         {match.home_team_name} - {match.away_team_name}
       </h1>
       <p className="page-subtitle">
-        {match.group_name} · {formatDateTimeSv(match.kickoff_at)}
+        Grupp {match.group_name} · {formatDateTimeSv(match.kickoff_at)}
       </p>
 
       <div className="card tournament-highlight-card" style={{ marginBottom: 20 }}>
