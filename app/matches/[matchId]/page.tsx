@@ -178,7 +178,6 @@ export default async function MatchInfoPage({
       </div>
 
       <div style={{ marginTop: 24 }}>
-        <h2 className="tournament-panel-title">Grupp {match.group_name}</h2>
         <TournamentStandings groups={currentGroup} />
       </div>
     </div>
