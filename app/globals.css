@@ -488,8 +488,8 @@ select {
 }
 
 .leader-rank-silver {
-  background: linear-gradient(180deg, #f3f5f8 0%, #c7d0da 100%);
-  color: #334155;
+  background: linear-gradient(180deg, #d9e0e8 0%, #98a4b2 100%);
+  color: #233243;
 }
 
 .leader-rank-bronze {
@@ -498,8 +498,8 @@ select {
 }
 
 .leader-rank-neutral {
-  background: linear-gradient(180deg, #dbe6f5 0%, #bcccdc 100%);
-  color: #244061;
+  background: linear-gradient(180deg, #7a8ba3 0%, #52657f 100%);
+  color: #f8fbff;
 }
 
 .leader-link {
