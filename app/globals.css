@@ -75,7 +75,7 @@ a:hover {
 
 .nav-links {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -444,7 +444,7 @@ select {
 .tournament-panel-title {
   margin-top: 0;
   margin-bottom: 16px;
-  color: var(--navy-900);
+  color: #f8fbff;
   font-size: 25px;
   letter-spacing: -0.02em;
 }
@@ -523,6 +523,10 @@ select {
   border-radius: 999px;
   background: linear-gradient(180deg, var(--gold-400), var(--gold-500));
   box-shadow: 0 0 0 4px rgba(229, 195, 90, 0.16);
+}
+
+.section-title-on-dark {
+  color: #f8fbff;
 }
 
 .broadcast-list {

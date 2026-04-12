@@ -49,6 +49,17 @@ const swedishTeamNames: Record<string, string> = {
   Uzbekistan: "Uzbekistan",
 };
 
+const manualCanonicalAliases: Record<string, string> = {
+  "United States": "USA",
+  "United States of America": "USA",
+  "Czech Republic": "Czechia",
+  "South Korea": "Korea Republic",
+  "Cape Verde": "Cabo Verde",
+  "DR Congo": "Congo DR",
+  "Bosnia and Herzegovina": "Bosnia-Herzegovina",
+  Turkey: "Türkiye",
+};
+
 const canonicalAliases: Record<string, string> = Object.fromEntries(
   Object.entries(swedishTeamNames).flatMap(([englishName, swedishName]) => [
     [englishName, englishName],
@@ -67,14 +78,14 @@ function normalizeText(value: string | null | undefined) {
 }
 
 const normalizedAliasMap = new Map(
-  Object.entries(canonicalAliases).map(([alias, canonical]) => [
-    normalizeText(alias),
-    canonical,
-  ])
+  [...Object.entries(canonicalAliases), ...Object.entries(manualCanonicalAliases)].map(
+    ([alias, canonical]) => [normalizeText(alias), canonical]
+  )
 );
 
 export function displayTeamName(name: string) {
-  return swedishTeamNames[name] || name;
+  const canonical = toCanonicalTeamName(name);
+  return swedishTeamNames[canonical] || canonical;
 }
 
 export function toCanonicalTeamName(name: string) {
@@ -83,5 +94,5 @@ export function toCanonicalTeamName(name: string) {
 }
 
 export function normalizeTeamNameForMatching(name: string) {
-  return normalizeText(displayTeamName(toCanonicalTeamName(name)));
+  return normalizeText(displayTeamName(name));
 }

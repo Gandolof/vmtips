@@ -25,6 +25,7 @@ const TVMATCHEN_URL = "https://www.tvmatchen.nu/fotboll/fotbolls-vm";
 import {
   displayTeamName,
   normalizeTeamNameForMatching,
+  toCanonicalTeamName,
 } from "./team-names";
 
 function normalizeText(value: string | null | undefined) {
@@ -43,7 +44,7 @@ function normalizeVenue(value: string | null | undefined) {
 }
 
 function slugifyTvMatchenName(value: string) {
-  return displayTeamName(value)
+  return displayTeamName(toCanonicalTeamName(value))
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/&/g, "och")

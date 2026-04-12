@@ -71,7 +71,7 @@ function ensurePredictionsTableSupportsSets() {
   `);
 }
 
-function ensurePredictionPointsBackfilled() {
+function ensurePredictionPointsSynced() {
   const rows = db
     .prepare(
       `
@@ -83,8 +83,7 @@ function ensurePredictionPointsBackfilled() {
         matches.actual_away_score
       FROM predictions
       JOIN matches ON matches.id = predictions.match_id
-      WHERE predictions.points_awarded IS NULL
-        AND matches.actual_home_score IS NOT NULL
+      WHERE matches.actual_home_score IS NOT NULL
         AND matches.actual_away_score IS NOT NULL
     `
     )
@@ -179,7 +178,7 @@ export function ensureDbInitialized() {
   `);
 
   ensurePredictionsTableSupportsSets();
-  ensurePredictionPointsBackfilled();
+  ensurePredictionPointsSynced();
   ensureTournamentBootstrap(db);
   initialized = true;
 }

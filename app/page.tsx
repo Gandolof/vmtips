@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HomeHeroLinks from "../components/HomeHeroLinks";
 import MatchesOverview from "../components/MatchesOverview";
 
 export const dynamic = "force-dynamic";
@@ -14,27 +15,29 @@ export default function HomePage() {
       </p>
 
       <div className="card">
-        <h2>Så fungerar poängen</h2>
-        <ul>
-          <li>Exakt resultat = 10 poäng</li>
-          <li>Rätt vinnare eller oavgjort = 8 minus totalt antal mål fel</li>
-          <li>Fel utfall = 0 poäng</li>
-        </ul>
+        <h2>VM-tipset 2026 är här!</h2>
 
-        <div className="hero-links">
-          <Link className="button" href="/login">
-            Logga in
-          </Link>
-          <Link className="button" href="/test">
-            Tippa
-          </Link>
-          <Link className="button" href="/leaderboard">
-            Topplista
-          </Link>
-          <Link className="button-secondary button" href="/admin">
-            Admin
-          </Link>
-        </div>
+        <p>
+          Det är 2026 och ännu ett stort mästerskap står för dörren – och vårt
+          kära fotbollslandslag tog sig dit, om än med hjärtat i halsgropen. Nu
+          är det dags igen: VM-tipset är tillbaka, och vi siktar på ännu ett
+          succéår!
+        </p>
+
+        <p>
+          Vi kör vidare på det beprövade konceptet. Har du varit med tidigare vet
+          du precis hur det fungerar – och är du ny rekommenderar vi att du tar
+          en titt på reglerna efter att du har registrerat dig och loggat in.
+        </p>
+
+        <p>
+          Du kan lämna in dina tips ända fram till första matchstart. Tänk bara
+          på att betalningen också måste vara registrerad innan dess.
+        </p>
+
+        <p>Lycka till! ⚽</p>
+
+        <HomeHeroLinks />
       </div>
 
       <div style={{ marginTop: 24 }}>

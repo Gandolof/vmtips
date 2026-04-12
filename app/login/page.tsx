@@ -56,7 +56,7 @@ export default function LoginPage() {
     setMessage(data.message || data.error);
 
     if (res.ok) {
-      router.push("/test");
+      router.push("/predict");
       router.refresh();
     }
   }
@@ -83,7 +83,7 @@ export default function LoginPage() {
               Du är redan inloggad som <strong>{user.name}</strong>.
             </div>
             <div className="hero-links" style={{ marginTop: 12 }}>
-              <Link className="button" href="/test">
+              <Link className="button" href="/predict">
                 Gå till tipsen
               </Link>
               {user.role === "ADMIN" && (

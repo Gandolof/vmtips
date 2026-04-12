@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDateTimeSv } from "../../lib/date-format";
 
 export default function ResultsPage() {
@@ -9,9 +10,10 @@ export default function ResultsPage() {
 
   const [matches, setMatches] = useState<any[]>([]);
   const [message, setMessage] = useState("");
+  const router = useRouter();
 
   async function load() {
-    const data = await fetch("/api/results-list").then((r) => r.json());
+    const data = await fetch("/api/results-list", { cache: "no-store" }).then((r) => r.json());
     setMatches(data);
   }
 
@@ -49,6 +51,7 @@ export default function ResultsPage() {
       headers: {
         "Content-Type": "application/json",
       },
+      cache: "no-store",
       body: JSON.stringify({
         matchId,
         actualHomeScore: Number(home),
@@ -60,6 +63,7 @@ export default function ResultsPage() {
     setMessage(data.message || data.error);
 
     await load();
+    router.refresh();
   }
 
   if (!loaded) {

@@ -26,7 +26,7 @@ export default function MatchesOverview({
         <div className="card tournament-highlight-card">
           <div className="prediction-toolbar match-list-toolbar">
             <div className="small-text">{matches.length} matcher i gruppspelet</div>
-            <Link className="button" href="/test">
+            <Link className="button" href="/predict">
               Gå till tippa
             </Link>
           </div>
@@ -96,7 +96,7 @@ export default function MatchesOverview({
             </div>
           </div>
 
-          <h3 className="group-title">Gruppställning</h3>
+          <h3 className="group-title section-title-on-dark">Gruppställning</h3>
           <TournamentStandings groups={groups} />
         </div>
       </div>

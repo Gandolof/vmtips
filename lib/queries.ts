@@ -2,6 +2,30 @@ import { db } from "./db";
 import { calculatePoints } from "./scoring";
 import { displayTeamName } from "./team-names";
 
+function getCalculatedPoints(
+  predictedHomeScore: number | null,
+  predictedAwayScore: number | null,
+  actualHomeScore: number | null,
+  actualAwayScore: number | null,
+  storedPoints: number | null
+) {
+  if (
+    predictedHomeScore === null ||
+    predictedAwayScore === null ||
+    actualHomeScore === null ||
+    actualAwayScore === null
+  ) {
+    return storedPoints;
+  }
+
+  return calculatePoints(
+    predictedHomeScore,
+    predictedAwayScore,
+    actualHomeScore,
+    actualAwayScore
+  );
+}
+
 export function getSettings() {
   return db
     .prepare(
@@ -177,34 +201,86 @@ export function savePredictionsBulk(
 }
 
 export function getLeaderboard() {
-  return db
+  const users = db
     .prepare(
       `
-      WITH prediction_sets AS (
-        SELECT users.id AS user_id, 1 AS prediction_set
-        FROM users
-        UNION
-        SELECT DISTINCT predictions.user_id, predictions.prediction_set
-        FROM predictions
-      )
-      SELECT
-        users.id AS user_id,
-        prediction_sets.prediction_set,
-        CASE
-          WHEN prediction_sets.prediction_set = 1 THEN users.name
-          ELSE users.name || ' (' || prediction_sets.prediction_set || ')'
-        END AS name,
-        COALESCE(SUM(predictions.points_awarded), 0) AS total_points
-      FROM prediction_sets
-      JOIN users ON users.id = prediction_sets.user_id
-      LEFT JOIN predictions
-        ON predictions.user_id = prediction_sets.user_id
-        AND predictions.prediction_set = prediction_sets.prediction_set
-      GROUP BY users.id, users.name, prediction_sets.prediction_set
-      ORDER BY total_points DESC, users.name ASC
+      SELECT id, name
+      FROM users
+      ORDER BY name ASC
     `
     )
-    .all();
+    .all() as Array<{ id: number; name: string }>;
+
+  const predictions = db
+    .prepare(
+      `
+      SELECT
+        predictions.user_id,
+        predictions.prediction_set,
+        predictions.predicted_home_score,
+        predictions.predicted_away_score,
+        predictions.points_awarded,
+        matches.actual_home_score,
+        matches.actual_away_score
+      FROM predictions
+      JOIN matches ON matches.id = predictions.match_id
+    `
+    )
+    .all() as Array<{
+    user_id: number;
+    prediction_set: number;
+    predicted_home_score: number | null;
+    predicted_away_score: number | null;
+    points_awarded: number | null;
+    actual_home_score: number | null;
+    actual_away_score: number | null;
+  }>;
+
+  const totals = new Map<string, { user_id: number; prediction_set: number; total_points: number }>();
+
+  for (const user of users) {
+    const key = `${user.id}-1`;
+    totals.set(key, { user_id: user.id, prediction_set: 1, total_points: 0 });
+  }
+
+  for (const prediction of predictions) {
+    const key = `${prediction.user_id}-${prediction.prediction_set}`;
+    const current =
+      totals.get(key) || {
+        user_id: prediction.user_id,
+        prediction_set: prediction.prediction_set,
+        total_points: 0,
+      };
+
+    current.total_points +=
+      getCalculatedPoints(
+        prediction.predicted_home_score,
+        prediction.predicted_away_score,
+        prediction.actual_home_score,
+        prediction.actual_away_score,
+        prediction.points_awarded
+      ) || 0;
+
+    totals.set(key, current);
+  }
+
+  return Array.from(totals.values())
+    .map((row) => {
+      const user = users.find((item) => item.id === row.user_id)!;
+
+      return {
+        user_id: row.user_id,
+        prediction_set: row.prediction_set,
+        name:
+          row.prediction_set === 1
+            ? user.name
+            : `${user.name} (${row.prediction_set})`,
+        total_points: row.total_points,
+      };
+    })
+    .sort(
+      (a, b) => b.total_points - a.total_points || a.name.localeCompare(b.name, "sv")
+    );
 }
 
 export function getUserById(userId: number) {
@@ -334,6 +410,13 @@ export function getMatchesWithPredictions(userId: number, predictionSet = 1) {
     ...match,
     home_team_name: displayTeamName(match.home_team_name),
     away_team_name: displayTeamName(match.away_team_name),
+    points_awarded: getCalculatedPoints(
+      match.predicted_home_score,
+      match.predicted_away_score,
+      match.actual_home_score,
+      match.actual_away_score,
+      match.points_awarded
+    ),
   }));
 }
 
@@ -398,7 +481,7 @@ export function getMatchById(matchId: number) {
 }
 
 export function getPredictionsForMatch(matchId: number) {
-  return db
+  return (db
     .prepare(
       `
       SELECT
@@ -410,8 +493,11 @@ export function getPredictionsForMatch(matchId: number) {
         END AS name,
         predictions.predicted_home_score,
         predictions.predicted_away_score,
-        predictions.points_awarded
+        predictions.points_awarded,
+        matches.actual_home_score,
+        matches.actual_away_score
       FROM predictions
+      JOIN matches ON matches.id = predictions.match_id
       JOIN users ON users.id = predictions.user_id
       WHERE predictions.match_id = ?
       ORDER BY
@@ -426,7 +512,18 @@ export function getPredictionsForMatch(matchId: number) {
     predicted_home_score: number | null;
     predicted_away_score: number | null;
     points_awarded: number | null;
-  }>;
+    actual_home_score: number | null;
+    actual_away_score: number | null;
+  }>).map((prediction) => ({
+    ...prediction,
+    points_awarded: getCalculatedPoints(
+      prediction.predicted_home_score,
+      prediction.predicted_away_score,
+      prediction.actual_home_score,
+      prediction.actual_away_score,
+      prediction.points_awarded
+    ),
+  }));
 }
 
 type TournamentInfoMatch = {

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { formatDateTimeSv } from "../../lib/date-format";
 
-export default function TestPage() {
+export default function PredictPage() {
   const [matches, setMatches] = useState<any[]>([]);
   const [scores, setScores] = useState<Record<number, { home: string; away: string }>>({});
   const [message, setMessage] = useState("");
@@ -12,6 +13,7 @@ export default function TestPage() {
   const [lockTime, setLockTime] = useState<string>("");
   const [activePredictionSet, setActivePredictionSet] = useState<1 | 2>(1);
   const [showSecondPredictionSet, setShowSecondPredictionSet] = useState(false);
+  const latestLoadRequest = useRef(0);
 
   async function loadUser() {
     const data = await fetch("/api/me", { cache: "no-store" }).then((r) => r.json());
@@ -20,12 +22,18 @@ export default function TestPage() {
   }
 
   async function loadMatches(userId: number, predictionSet: 1 | 2) {
+    const requestId = ++latestLoadRequest.current;
     const data = await fetch(
-      `/api/test-matches-v2?userId=${userId}&predictionSet=${predictionSet}`,
+      `/api/predict-matches-v2?userId=${userId}&predictionSet=${predictionSet}`,
       {
-      cache: "no-store",
+        cache: "no-store",
       }
     ).then((r) => r.json());
+
+    if (requestId !== latestLoadRequest.current) {
+      return Boolean(data.hasPredictions);
+    }
+
     setMatches(data.matches || []);
     setScores(
       Object.fromEntries(
@@ -144,7 +152,7 @@ export default function TestPage() {
       <h1 className="page-title">Tips</h1>
       <p className="page-subtitle">
         {user
-          ? `Inloggad som ${user.name}. Du redigerar tipsuppsättning ${activePredictionSet}.`
+          ? "Tips 1 är obligatoriskt, medan Tips 2 är frivilligt."
           : "Fyll i dina tips nedan."}
       </p>
 
@@ -200,6 +208,9 @@ export default function TestPage() {
 
         {user && (
           <div style={{ marginTop: 16 }}>
+            <Link className="button-secondary button" href="/rules" style={{ marginRight: 12 }}>
+              Regler
+            </Link>
             <button onClick={saveAll} disabled={locked || !user || matches.length === 0}>
               Spara alla tips
             </button>
@@ -208,7 +219,7 @@ export default function TestPage() {
       </div>
 
       {matches.length > 0 && (
-        <div className="card">
+        <div className="card" key={activePredictionSet}>
           <div className="prediction-toolbar">
             <div className="small-text">{matches.length} matcher</div>
           </div>
@@ -221,10 +232,7 @@ export default function TestPage() {
                 </div>
 
                 <div className="prediction-main">
-                  <a
-                    className="prediction-match-link"
-                    href={`/matches/${m.id}`}
-                  >
+                  <a className="prediction-match-link" href={`/matches/${m.id}`}>
                     {m.home_team_name} - {m.away_team_name}
                   </a>
                   <input

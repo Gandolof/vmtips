@@ -15,18 +15,21 @@ export async function GET(req: Request) {
     }
 
     const rows = getMatchesWithPredictions(userId, predictionSet);
-    return Response.json({
-      predictionSet,
-      hasPredictions: userHasPredictionSet(userId, predictionSet),
-      matches: rows.map((row: any) => ({
-        ...row,
-        fifa_url: getFifaMatchUrl(row),
-      })),
-    }, {
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
+    return Response.json(
+      {
+        predictionSet,
+        hasPredictions: userHasPredictionSet(userId, predictionSet),
+        matches: rows.map((row: any) => ({
+          ...row,
+          fifa_url: getFifaMatchUrl(row),
+        })),
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Kunde inte läsa in matcherna" },
