@@ -74,7 +74,19 @@ export default function MatchesOverview({
                       className="prediction-match-link leader-link"
                       href={`/leaderboard/${leader.user_id}?set=${leader.prediction_set}`}
                     >
-                      <span className="leader-rank">{index + 1}</span>
+                      <span
+                        className={`leader-rank ${
+                          index === 0
+                            ? "leader-rank-gold"
+                            : index === 1
+                              ? "leader-rank-silver"
+                              : index === 2
+                                ? "leader-rank-bronze"
+                                : "leader-rank-neutral"
+                        }`}
+                      >
+                        {index + 1}
+                      </span>
                       {leader.name}
                     </Link>
                     <div className="prediction-value">{leader.total_points} p</div>

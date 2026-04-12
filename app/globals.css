@@ -482,6 +482,26 @@ select {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
+.leader-rank-gold {
+  background: linear-gradient(180deg, #f7e3a0 0%, #dfbb52 100%);
+  color: #372804;
+}
+
+.leader-rank-silver {
+  background: linear-gradient(180deg, #f3f5f8 0%, #c7d0da 100%);
+  color: #334155;
+}
+
+.leader-rank-bronze {
+  background: linear-gradient(180deg, #e7b28a 0%, #b86b43 100%);
+  color: #fff7f0;
+}
+
+.leader-rank-neutral {
+  background: linear-gradient(180deg, #dbe6f5 0%, #bcccdc 100%);
+  color: #244061;
+}
+
 .leader-link {
   display: inline-flex;
   align-items: center;
