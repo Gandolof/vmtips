@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { calculatePoints } from "./scoring";
 import { ensureTournamentBootstrap } from "./tournament-bootstrap";
 
 const defaultDbPath = path.join(process.cwd(), "data", "worldcup.db");
@@ -70,6 +71,59 @@ function ensurePredictionsTableSupportsSets() {
   `);
 }
 
+function ensurePredictionPointsBackfilled() {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        predictions.id,
+        predictions.predicted_home_score,
+        predictions.predicted_away_score,
+        matches.actual_home_score,
+        matches.actual_away_score
+      FROM predictions
+      JOIN matches ON matches.id = predictions.match_id
+      WHERE predictions.points_awarded IS NULL
+        AND matches.actual_home_score IS NOT NULL
+        AND matches.actual_away_score IS NOT NULL
+    `
+    )
+    .all() as Array<{
+    id: number;
+    predicted_home_score: number;
+    predicted_away_score: number;
+    actual_home_score: number;
+    actual_away_score: number;
+  }>;
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const updateStmt = db.prepare(
+    `
+    UPDATE predictions
+    SET points_awarded = ?
+    WHERE id = ?
+  `
+  );
+
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      const points = calculatePoints(
+        row.predicted_home_score,
+        row.predicted_away_score,
+        row.actual_home_score,
+        row.actual_away_score
+      );
+
+      updateStmt.run(points, row.id);
+    }
+  });
+
+  tx();
+}
+
 export function ensureDbInitialized() {
   if (initialized) return;
 
@@ -125,6 +179,7 @@ export function ensureDbInitialized() {
   `);
 
   ensurePredictionsTableSupportsSets();
+  ensurePredictionPointsBackfilled();
   ensureTournamentBootstrap(db);
   initialized = true;
 }

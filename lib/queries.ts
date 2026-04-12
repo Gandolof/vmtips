@@ -388,18 +388,16 @@ export function getPredictionsForMatch(matchId: number) {
         users.id AS user_id,
         predictions.prediction_set,
         CASE
-          WHEN predictions.prediction_set IS NULL OR predictions.prediction_set = 1 THEN users.name
+          WHEN predictions.prediction_set = 1 THEN users.name
           ELSE users.name || ' (' || predictions.prediction_set || ')'
         END AS name,
         predictions.predicted_home_score,
         predictions.predicted_away_score,
         predictions.points_awarded
-      FROM users
-      LEFT JOIN predictions
-        ON predictions.user_id = users.id
-        AND predictions.match_id = ?
+      FROM predictions
+      JOIN users ON users.id = predictions.user_id
+      WHERE predictions.match_id = ?
       ORDER BY
-        CASE WHEN predictions.prediction_set IS NULL THEN 1 ELSE 0 END ASC,
         users.name ASC,
         predictions.prediction_set ASC
     `
