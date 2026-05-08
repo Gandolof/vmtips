@@ -354,6 +354,24 @@ export function saveMatchResult(
   tx();
 }
 
+export function clearMatchResult(matchId: number) {
+  db.prepare(
+    `
+    UPDATE matches
+    SET actual_home_score = NULL, actual_away_score = NULL, status = 'SCHEDULED'
+    WHERE id = ?
+  `
+  ).run(matchId);
+
+  db.prepare(
+    `
+    UPDATE predictions
+    SET points_awarded = NULL
+    WHERE match_id = ?
+  `
+  ).run(matchId);
+}
+
 export function getAllMatches() {
   return (db
     .prepare(

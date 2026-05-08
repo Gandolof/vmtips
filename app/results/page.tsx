@@ -66,6 +66,33 @@ export default function ResultsPage() {
     router.refresh();
   }
 
+  async function clear(matchId: number) {
+    setMessage("");
+
+    const confirmed = window.confirm(
+      "Är du säker på att du vill ta bort det sparade resultatet för matchen?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const res = await fetch("/api/results", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      body: JSON.stringify({ matchId }),
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    await load();
+    router.refresh();
+  }
+
   if (!loaded) {
     return <div>Laddar...</div>;
   }
@@ -117,6 +144,13 @@ export default function ResultsPage() {
             />
             <div className="team-name">{m.away_team_name}</div>
             <button onClick={() => save(m.id)}>Spara resultat</button>
+            <button
+              className="button-secondary"
+              onClick={() => clear(m.id)}
+              disabled={m.actual_home_score === null || m.actual_away_score === null}
+            >
+              Ta bort resultat
+            </button>
           </div>
 
           <div className="small-text" style={{ marginTop: 10 }}>
