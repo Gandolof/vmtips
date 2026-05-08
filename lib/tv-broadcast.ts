@@ -77,6 +77,11 @@ function normalizeChannel(channel: TvMatchenChannel) {
   return channel;
 }
 
+function isSupportedBroadcastChannel(channel: TvMatchenChannel) {
+  const label = (channel.shortname || channel.name || "").trim().toLowerCase();
+  return label !== "dbet";
+}
+
 async function loadTvMatchenMatchPageForMatch(match: {
   home_team_name: string;
   away_team_name: string;
@@ -194,7 +199,15 @@ export async function getBroadcastInfoForMatch(match: {
     return null;
   }
 
+  const channels = fixture.channels
+    .filter(isSupportedBroadcastChannel)
+    .map(normalizeChannel);
+
+  if (channels.length === 0) {
+    return null;
+  }
+
   return {
-    channels: fixture.channels.map(normalizeChannel),
+    channels,
   } satisfies MatchBroadcastInfo;
 }
