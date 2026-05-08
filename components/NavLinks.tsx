@@ -17,7 +17,6 @@ export default function NavLinks() {
 
   return (
     <nav className="nav-links">
-      <Link href="/login">Logga in</Link>
       <Link href="/predict">Tippa</Link>
       {user && <Link href="/rules">Regler</Link>}
       <Link href="/leaderboard">Topplista</Link>

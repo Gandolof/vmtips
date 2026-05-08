@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -39,7 +40,12 @@ export default function HeaderUser() {
           </button>
         </>
       ) : (
-        <span>Inte inloggad</span>
+        <>
+          <span>Inte inloggad</span>
+          <Link className="button-secondary button" href="/login">
+            Logga in/registrera
+          </Link>
+        </>
       )}
     </div>
   );
