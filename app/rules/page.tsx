@@ -16,6 +16,16 @@ export default function RulesPage() {
           med tidigare kommer du känna igen dig direkt. Är du ny? Inga problem –
           fråga någon rutinerad i gänget så är du snabbt med i matchen 👍
         </p>
+        <p>
+          Gå gärna också med i Facebook-gruppen:{" "}
+          <a
+            href="https://www.facebook.com/groups/vmtips2026"
+            target="_blank"
+            rel="noreferrer"
+          >
+            https://www.facebook.com/groups/vmtips2026
+          </a>
+        </p>
 
         <h2>Så här funkar poängen:</h2>
 
