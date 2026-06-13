@@ -9,12 +9,18 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [backups, setBackups] = useState<any[]>([]);
   const [latestBackup, setLatestBackup] = useState<any>(null);
+  const [names, setNames] = useState<Record<number, string>>({});
   const [passwords, setPasswords] = useState<Record<number, string>>({});
   const [message, setMessage] = useState("");
 
   async function loadUsers() {
     const data = await fetch("/api/admin/users", { cache: "no-store" }).then((r) => r.json());
     setUsers(Array.isArray(data) ? data : []);
+    if (Array.isArray(data)) {
+      setNames(
+        Object.fromEntries(data.map((listedUser) => [listedUser.id, listedUser.name]))
+      );
+    }
   }
 
   async function loadBackupInfo() {
@@ -102,6 +108,72 @@ export default function AdminPage() {
             : listedUser
         )
       );
+    }
+  }
+
+  async function updateUserName(userId: number) {
+    setMessage("");
+
+    const name = names[userId]?.trim() || "";
+    if (!name) {
+      setMessage("Namnet får inte vara tomt.");
+      return;
+    }
+
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId, name }),
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      setUsers((current) =>
+        current.map((listedUser) =>
+          listedUser.id === userId ? { ...listedUser, name } : listedUser
+        )
+      );
+    }
+  }
+
+  async function deleteUser(userId: number, name: string) {
+    setMessage("");
+
+    const confirmed = window.confirm(
+      `Är du säker på att du vill ta bort ${name}? Användaren, sessioner och alla tips tas bort.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      setUsers((current) => current.filter((listedUser) => listedUser.id !== userId));
+      setNames((current) => {
+        const updated = { ...current };
+        delete updated[userId];
+        return updated;
+      });
+      setPasswords((current) => {
+        const updated = { ...current };
+        delete updated[userId];
+        return updated;
+      });
     }
   }
 
@@ -271,18 +343,36 @@ export default function AdminPage() {
           <thead>
             <tr>
               <th>Namn</th>
+              <th></th>
               <th>E-post</th>
               <th>Roll</th>
               <th>Admin</th>
               <th>Betalt</th>
               <th>Nytt lösenord</th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {users.map((listedUser) => (
               <tr key={listedUser.id}>
-                <td>{listedUser.name}</td>
+                <td>
+                  <input
+                    type="text"
+                    value={names[listedUser.id] ?? listedUser.name}
+                    onChange={(e) =>
+                      setNames((current) => ({
+                        ...current,
+                        [listedUser.id]: e.target.value,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
+                  <button onClick={() => updateUserName(listedUser.id)}>
+                    Spara namn
+                  </button>
+                </td>
                 <td>{listedUser.email || "-"}</td>
                 <td>{listedUser.role}</td>
                 <td>
@@ -322,6 +412,15 @@ export default function AdminPage() {
                 <td>
                   <button onClick={() => resetPassword(listedUser.id)}>
                     Återställ lösenord
+                  </button>
+                </td>
+                <td>
+                  <button
+                    className="button-secondary"
+                    onClick={() => deleteUser(listedUser.id, listedUser.name)}
+                    disabled={listedUser.id === user.id}
+                  >
+                    Ta bort användare
                   </button>
                 </td>
               </tr>

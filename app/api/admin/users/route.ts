@@ -97,6 +97,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const userId = Number(body.userId);
     const role = String(body.role || "").trim().toUpperCase();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
     const hasPaid = body.hasPaid;
 
     if (Number.isNaN(userId)) {
@@ -107,9 +108,10 @@ export async function PATCH(req: Request) {
     }
 
     const shouldUpdateRole = ["ADMIN", "USER"].includes(role);
+    const shouldUpdateName = name.length > 0;
     const shouldUpdatePaid = typeof hasPaid === "boolean";
 
-    if (!shouldUpdateRole && !shouldUpdatePaid) {
+    if (!shouldUpdateRole && !shouldUpdatePaid && !shouldUpdateName) {
       return Response.json(
         { error: "Ingen giltig uppdatering skickades" },
         { status: 400 }
@@ -119,7 +121,7 @@ export async function PATCH(req: Request) {
     const existing = db
       .prepare(
         `
-        SELECT id, role, has_paid
+        SELECT id, name, role, has_paid
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -128,6 +130,7 @@ export async function PATCH(req: Request) {
       .get(userId) as
       | {
           id: number;
+          name: string;
           role: string;
           has_paid: number;
         }
@@ -143,9 +146,29 @@ export async function PATCH(req: Request) {
       });
     }
 
+    if (shouldUpdateName && existing.name === name) {
+      return Response.json({
+        message: "Namnet är redan uppdaterat",
+      });
+    }
+
     if (shouldUpdatePaid && existing.has_paid === Number(hasPaid)) {
       return Response.json({
         message: hasPaid ? "Användaren är redan markerad som betald" : "Användaren är redan markerad som obetald",
+      });
+    }
+
+    if (shouldUpdateRole && shouldUpdatePaid && shouldUpdateName) {
+      db.prepare(
+        `
+        UPDATE users
+        SET name = ?, role = ?, has_paid = ?
+        WHERE id = ?
+      `
+      ).run(name, role, Number(hasPaid), userId);
+
+      return Response.json({
+        message: "Användaren har uppdaterats",
       });
     }
 
@@ -157,6 +180,34 @@ export async function PATCH(req: Request) {
         WHERE id = ?
       `
       ).run(role, Number(hasPaid), userId);
+
+      return Response.json({
+        message: "Användaren har uppdaterats",
+      });
+    }
+
+    if (shouldUpdateName && shouldUpdatePaid) {
+      db.prepare(
+        `
+        UPDATE users
+        SET name = ?, has_paid = ?
+        WHERE id = ?
+      `
+      ).run(name, Number(hasPaid), userId);
+
+      return Response.json({
+        message: "Användaren har uppdaterats",
+      });
+    }
+
+    if (shouldUpdateName && shouldUpdateRole) {
+      db.prepare(
+        `
+        UPDATE users
+        SET name = ?, role = ?
+        WHERE id = ?
+      `
+      ).run(name, role, userId);
 
       return Response.json({
         message: "Användaren har uppdaterats",
@@ -177,6 +228,20 @@ export async function PATCH(req: Request) {
       });
     }
 
+    if (shouldUpdateName) {
+      db.prepare(
+        `
+        UPDATE users
+        SET name = ?
+        WHERE id = ?
+      `
+      ).run(name, userId);
+
+      return Response.json({
+        message: "Namnet har uppdaterats",
+      });
+    }
+
     db.prepare(
       `
       UPDATE users
@@ -193,6 +258,79 @@ export async function PATCH(req: Request) {
       {
         error:
           error instanceof Error ? error.message : "Kunde inte uppdatera rollen",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  const auth = requireAdminFromRequest(req);
+  if (!auth.ok) return auth.response;
+
+  try {
+    const body = await req.json();
+    const userId = Number(body.userId);
+
+    if (Number.isNaN(userId)) {
+      return Response.json({ error: "Användare måste anges" }, { status: 400 });
+    }
+
+    if (auth.session.user_id === userId) {
+      return Response.json(
+        { error: "Du kan inte ta bort ditt eget konto" },
+        { status: 400 }
+      );
+    }
+
+    const existing = db
+      .prepare(
+        `
+        SELECT id
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `
+      )
+      .get(userId);
+
+    if (!existing) {
+      return Response.json({ error: "Användaren hittades inte" }, { status: 404 });
+    }
+
+    const tx = db.transaction(() => {
+      db.prepare(
+        `
+        DELETE FROM sessions
+        WHERE user_id = ?
+      `
+      ).run(userId);
+
+      db.prepare(
+        `
+        DELETE FROM predictions
+        WHERE user_id = ?
+      `
+      ).run(userId);
+
+      db.prepare(
+        `
+        DELETE FROM users
+        WHERE id = ?
+      `
+      ).run(userId);
+    });
+
+    tx();
+
+    return Response.json({
+      message: "Användaren och tillhörande tips har tagits bort",
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Kunde inte ta bort användaren",
       },
       { status: 500 }
     );
