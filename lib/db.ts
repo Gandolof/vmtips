@@ -24,6 +24,33 @@ export const db = new Database(dbPath);
 
 let initialized = false;
 
+function ensureUsersTableSupportsPaidFlag() {
+  const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{
+    name: string;
+  }>;
+  const hasPaid = columns.some((column) => column.name === "has_paid");
+
+  if (hasPaid) {
+    return;
+  }
+
+  try {
+    db.exec(`
+      ALTER TABLE users
+      ADD COLUMN has_paid INTEGER NOT NULL DEFAULT 0;
+    `);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.toLowerCase().includes("duplicate column name")
+    ) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 function ensurePredictionsTableSupportsSets() {
   const columns = db.prepare("PRAGMA table_info(predictions)").all() as Array<{
     name: string;
@@ -177,6 +204,7 @@ export function ensureDbInitialized() {
     );
   `);
 
+  ensureUsersTableSupportsPaidFlag();
   ensurePredictionsTableSupportsSets();
   ensurePredictionPointsSynced();
   ensureTournamentBootstrap(db);

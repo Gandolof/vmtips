@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const users = db
       .prepare(
         `
-        SELECT id, name, email, role
+        SELECT id, name, email, role, has_paid
         FROM users
         ORDER BY name ASC
       `
@@ -97,10 +97,21 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const userId = Number(body.userId);
     const role = String(body.role || "").trim().toUpperCase();
+    const hasPaid = body.hasPaid;
 
-    if (Number.isNaN(userId) || !["ADMIN", "USER"].includes(role)) {
+    if (Number.isNaN(userId)) {
       return Response.json(
-        { error: "Användare och giltig roll måste anges" },
+        { error: "Användare måste anges" },
+        { status: 400 }
+      );
+    }
+
+    const shouldUpdateRole = ["ADMIN", "USER"].includes(role);
+    const shouldUpdatePaid = typeof hasPaid === "boolean";
+
+    if (!shouldUpdateRole && !shouldUpdatePaid) {
+      return Response.json(
+        { error: "Ingen giltig uppdatering skickades" },
         { status: 400 }
       );
     }
@@ -108,7 +119,7 @@ export async function PATCH(req: Request) {
     const existing = db
       .prepare(
         `
-        SELECT id, role
+        SELECT id, role, has_paid
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -118,6 +129,7 @@ export async function PATCH(req: Request) {
       | {
           id: number;
           role: string;
+          has_paid: number;
         }
       | undefined;
 
@@ -125,22 +137,56 @@ export async function PATCH(req: Request) {
       return Response.json({ error: "Användaren hittades inte" }, { status: 404 });
     }
 
-    if (existing.role === role) {
+    if (shouldUpdateRole && existing.role === role) {
       return Response.json({
         message: role === "ADMIN" ? "Användaren är redan admin" : "Användaren är redan vanlig användare",
+      });
+    }
+
+    if (shouldUpdatePaid && existing.has_paid === Number(hasPaid)) {
+      return Response.json({
+        message: hasPaid ? "Användaren är redan markerad som betald" : "Användaren är redan markerad som obetald",
+      });
+    }
+
+    if (shouldUpdateRole && shouldUpdatePaid) {
+      db.prepare(
+        `
+        UPDATE users
+        SET role = ?, has_paid = ?
+        WHERE id = ?
+      `
+      ).run(role, Number(hasPaid), userId);
+
+      return Response.json({
+        message: "Användaren har uppdaterats",
+      });
+    }
+
+    if (shouldUpdateRole) {
+      db.prepare(
+        `
+        UPDATE users
+        SET role = ?
+        WHERE id = ?
+      `
+      ).run(role, userId);
+
+      return Response.json({
+        message: role === "ADMIN" ? "Användaren är nu admin" : "Admin-behörigheten togs bort",
       });
     }
 
     db.prepare(
       `
       UPDATE users
-      SET role = ?
+      SET has_paid = ?
       WHERE id = ?
     `
-    ).run(role, userId);
+    ).run(Number(hasPaid), userId);
 
     return Response.json({
-      message: role === "ADMIN" ? "Användaren är nu admin" : "Admin-behörigheten togs bort",
+      message: hasPaid ? "Användaren har markerats som betald" : "Användaren har markerats som obetald",
     });
   } catch (error) {
     return Response.json(

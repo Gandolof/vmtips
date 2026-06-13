@@ -80,6 +80,31 @@ export default function AdminPage() {
     }
   }
 
+  async function updateUserPaid(userId: number, hasPaid: boolean) {
+    setMessage("");
+
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId, hasPaid }),
+    });
+
+    const data = await res.json();
+    setMessage(data.message || data.error);
+
+    if (res.ok) {
+      setUsers((current) =>
+        current.map((listedUser) =>
+          listedUser.id === userId
+            ? { ...listedUser, has_paid: hasPaid ? 1 : 0 }
+            : listedUser
+        )
+      );
+    }
+  }
+
   async function createBackup() {
     setMessage("");
 
@@ -249,6 +274,7 @@ export default function AdminPage() {
               <th>E-post</th>
               <th>Roll</th>
               <th>Admin</th>
+              <th>Betalt</th>
               <th>Nytt lösenord</th>
               <th></th>
             </tr>
@@ -272,6 +298,13 @@ export default function AdminPage() {
                       Gör till admin
                     </button>
                   )}
+                </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(listedUser.has_paid)}
+                    onChange={(e) => updateUserPaid(listedUser.id, e.target.checked)}
+                  />
                 </td>
                 <td>
                   <input
