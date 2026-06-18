@@ -575,6 +575,154 @@ select {
   grid-row: 2;
 }
 
+.stats-chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.stats-chart {
+  width: 100%;
+  min-width: 720px;
+  height: auto;
+  display: block;
+}
+
+.stats-grid-line {
+  stroke: rgba(18, 48, 95, 0.12);
+  stroke-width: 1;
+}
+
+.stats-vertical-line {
+  stroke: rgba(18, 48, 95, 0.08);
+  stroke-width: 1;
+}
+
+.stats-axis-text {
+  fill: #5b6d8d;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stats-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.stats-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(239, 245, 255, 0.95), rgba(247, 250, 255, 0.95));
+  border: 1px solid rgba(18, 48, 95, 0.08);
+  text-align: left;
+  width: 100%;
+  color: #10203d !important;
+}
+
+.stats-legend-item-selected {
+  border-color: rgba(29, 99, 216, 0.35);
+  box-shadow: 0 10px 24px rgba(18, 48, 95, 0.08);
+}
+
+.stats-legend-item-muted {
+  opacity: 0.9;
+}
+
+.stats-legend-item span {
+  color: inherit !important;
+}
+
+.stats-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.stats-legend-name {
+  font-weight: 700;
+  min-width: 0;
+  flex: 1 1 auto;
+  color: #10203d !important;
+}
+
+.stats-legend-value {
+  font-weight: 800;
+  color: #12305f !important;
+  white-space: nowrap;
+}
+
+.stats-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.stats-card-grid > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-card-grid > .card + .card {
+  margin-top: 0;
+}
+
+.stats-card-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: #12305f;
+}
+
+.stats-card-leaders {
+  margin-top: 10px;
+  font-weight: 700;
+  color: #10203d;
+}
+
+.stats-card-details {
+  margin-top: 10px;
+}
+
+.stats-card-detail-row + .stats-card-detail-row {
+  margin-top: 8px;
+}
+
+.stats-card-ranking {
+  margin-top: 10px;
+}
+
+.stats-card-ranking-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.stats-card-ranking-row + .stats-card-ranking-row {
+  margin-top: 5px;
+}
+
+.stats-card-ranking-value {
+  font-weight: 800;
+  color: #12305f;
+  white-space: nowrap;
+}
+
+.stats-card-ranking-name {
+  color: #10203d;
+  text-align: right;
+}
+
 @media (max-width: 720px) {
   .matches-page-layout {
     grid-template-columns: 1fr;
@@ -637,5 +785,9 @@ select {
 
   .standings-table {
     table-layout: auto;
+  }
+
+  .stats-legend {
+    grid-template-columns: 1fr;
   }
 }

@@ -12,6 +12,12 @@ export default async function LeaderboardPage() {
       <h1 className="page-title">Topplista</h1>
       <p className="page-subtitle">Aktuell ställning för alla deltagare.</p>
 
+      <div className="hero-links" style={{ marginTop: 0, marginBottom: 20 }}>
+        <Link className="button-secondary button" href="/leaderboard/stats">
+          Statistik
+        </Link>
+      </div>
+
       <div className="card">
         <table className="table">
           <thead>

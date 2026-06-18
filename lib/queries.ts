@@ -544,6 +544,371 @@ export function getPredictionsForMatch(matchId: number) {
   }));
 }
 
+function getOutcome(homeScore: number, awayScore: number) {
+  if (homeScore > awayScore) return "HOME";
+  if (homeScore < awayScore) return "AWAY";
+  return "DRAW";
+}
+
+export type StatisticsTimelineMatch = {
+  matchId: number;
+  kickoffAt: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  actualHomeScore: number;
+  actualAwayScore: number;
+};
+
+export type StatisticsEntry = {
+  user_id: number;
+  prediction_set: number;
+  name: string;
+  total_points: number;
+  ten_count: number;
+  correct_outcome_count: number;
+  zero_count: number;
+  biggest_climb: number;
+  longest_streak: number;
+  upset_points: number;
+  timeline: Array<{
+    matchId: number;
+    totalPoints: number;
+    pointsGained: number;
+    rank: number;
+  }>;
+};
+
+export type StatisticsCard = {
+  title: string;
+  value: number;
+  leaders: string[];
+  leaderDetails?: Array<{
+    name: string;
+    detail: string;
+  }>;
+  description: string;
+};
+
+export function getStatisticsData() {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        predictions.user_id,
+        predictions.prediction_set,
+        users.name AS user_name,
+        matches.id AS match_id,
+        matches.kickoff_at,
+        home.name AS home_team_name,
+        away.name AS away_team_name,
+        matches.actual_home_score,
+        matches.actual_away_score,
+        predictions.predicted_home_score,
+        predictions.predicted_away_score,
+        predictions.points_awarded
+      FROM predictions
+      JOIN users ON users.id = predictions.user_id
+      JOIN matches ON matches.id = predictions.match_id
+      JOIN teams home ON home.id = matches.home_team_id
+      JOIN teams away ON away.id = matches.away_team_id
+      WHERE matches.actual_home_score IS NOT NULL
+        AND matches.actual_away_score IS NOT NULL
+      ORDER BY
+        matches.kickoff_at ASC,
+        matches.id ASC,
+        users.name ASC,
+        predictions.prediction_set ASC
+    `
+    )
+    .all() as Array<{
+    user_id: number;
+    prediction_set: number;
+    user_name: string;
+    match_id: number;
+    kickoff_at: string;
+    home_team_name: string;
+    away_team_name: string;
+    actual_home_score: number;
+    actual_away_score: number;
+    predicted_home_score: number;
+    predicted_away_score: number;
+    points_awarded: number | null;
+  }>;
+
+  const timelineMatches: StatisticsTimelineMatch[] = [];
+  const seenMatchIds = new Set<number>();
+
+  for (const row of rows) {
+    if (seenMatchIds.has(row.match_id)) {
+      continue;
+    }
+
+    seenMatchIds.add(row.match_id);
+    timelineMatches.push({
+      matchId: row.match_id,
+      kickoffAt: row.kickoff_at,
+      homeTeamName: displayTeamName(row.home_team_name),
+      awayTeamName: displayTeamName(row.away_team_name),
+      actualHomeScore: row.actual_home_score,
+      actualAwayScore: row.actual_away_score,
+    });
+  }
+
+  const entries = new Map<string, StatisticsEntry>();
+  const predictionsByMatch = new Map<
+    number,
+    Array<{
+      entryKey: string;
+      points: number;
+      correctOutcome: boolean;
+    }>
+  >();
+  const upsetMatchesByEntry = new Map<
+    string,
+    Array<{
+      matchId: number;
+      label: string;
+      points: number;
+    }>
+  >();
+
+  for (const row of rows) {
+    const key = `${row.user_id}-${row.prediction_set}`;
+    const points =
+      getCalculatedPoints(
+        row.predicted_home_score,
+        row.predicted_away_score,
+        row.actual_home_score,
+        row.actual_away_score,
+        row.points_awarded
+      ) || 0;
+    const actualOutcome = getOutcome(row.actual_home_score, row.actual_away_score);
+    const predictedOutcome = getOutcome(
+      row.predicted_home_score,
+      row.predicted_away_score
+    );
+    const correctOutcome = actualOutcome === predictedOutcome;
+
+    if (!entries.has(key)) {
+      entries.set(key, {
+        user_id: row.user_id,
+        prediction_set: row.prediction_set,
+        name:
+          row.prediction_set === 1
+            ? row.user_name
+            : `${row.user_name} (${row.prediction_set})`,
+        total_points: 0,
+        ten_count: 0,
+        correct_outcome_count: 0,
+        zero_count: 0,
+        biggest_climb: 0,
+        longest_streak: 0,
+        upset_points: 0,
+        timeline: [],
+      });
+    }
+
+    const entry = entries.get(key)!;
+    entry.total_points += points;
+    if (points === 10) entry.ten_count += 1;
+    if (points === 0) entry.zero_count += 1;
+    if (correctOutcome) entry.correct_outcome_count += 1;
+
+    const currentMatchPredictions = predictionsByMatch.get(row.match_id) || [];
+    currentMatchPredictions.push({
+      entryKey: key,
+      points,
+      correctOutcome,
+    });
+    predictionsByMatch.set(row.match_id, currentMatchPredictions);
+  }
+
+  const runningTotals = new Map<string, number>();
+  const runningStreaks = new Map<string, number>();
+  const bestStreaks = new Map<string, number>();
+  const previousRanks = new Map<string, number>();
+
+  const orderedEntries = Array.from(entries.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, "sv")
+  );
+
+  for (const entry of orderedEntries) {
+    runningTotals.set(`${entry.user_id}-${entry.prediction_set}`, 0);
+    runningStreaks.set(`${entry.user_id}-${entry.prediction_set}`, 0);
+    bestStreaks.set(`${entry.user_id}-${entry.prediction_set}`, 0);
+  }
+
+  for (const timelineMatch of timelineMatches) {
+    const predictions = predictionsByMatch.get(timelineMatch.matchId) || [];
+    const predictionsByEntry = new Map(
+      predictions.map((prediction) => [prediction.entryKey, prediction] as const)
+    );
+
+    const zeroCount = predictions.filter((prediction) => prediction.points === 0).length;
+    const isUpsetMatch =
+      predictions.length > 0 && zeroCount > predictions.length / 2;
+
+    for (const entry of orderedEntries) {
+      const key = `${entry.user_id}-${entry.prediction_set}`;
+      const prediction = predictionsByEntry.get(key);
+      const pointsGained = prediction?.points ?? 0;
+      const newTotal = (runningTotals.get(key) || 0) + pointsGained;
+      runningTotals.set(key, newTotal);
+
+      const currentStreak = pointsGained > 0 ? (runningStreaks.get(key) || 0) + 1 : 0;
+      runningStreaks.set(key, currentStreak);
+      bestStreaks.set(key, Math.max(bestStreaks.get(key) || 0, currentStreak));
+
+      if (isUpsetMatch) {
+        entry.upset_points += pointsGained;
+        if (pointsGained > 0) {
+          const currentUpsets = upsetMatchesByEntry.get(key) || [];
+          currentUpsets.push({
+            matchId: timelineMatch.matchId,
+            label: `${timelineMatch.homeTeamName} - ${timelineMatch.awayTeamName}`,
+            points: pointsGained,
+          });
+          upsetMatchesByEntry.set(key, currentUpsets);
+        }
+      }
+
+      entry.timeline.push({
+        matchId: timelineMatch.matchId,
+        totalPoints: newTotal,
+        pointsGained,
+        rank: 0,
+      });
+    }
+
+    const rankedEntries = [...orderedEntries].sort((a, b) => {
+      const totalA = runningTotals.get(`${a.user_id}-${a.prediction_set}`) || 0;
+      const totalB = runningTotals.get(`${b.user_id}-${b.prediction_set}`) || 0;
+      return totalB - totalA || a.name.localeCompare(b.name, "sv");
+    });
+
+    rankedEntries.forEach((entry, index) => {
+      const key = `${entry.user_id}-${entry.prediction_set}`;
+      const currentRank = index + 1;
+      const previousRank = previousRanks.get(key);
+
+      if (previousRank !== undefined) {
+        entry.biggest_climb = Math.max(entry.biggest_climb, previousRank - currentRank);
+      }
+
+      previousRanks.set(key, currentRank);
+
+      const point = entry.timeline[entry.timeline.length - 1];
+      if (point) {
+        point.rank = currentRank;
+      }
+    });
+  }
+
+  for (const entry of orderedEntries) {
+    const key = `${entry.user_id}-${entry.prediction_set}`;
+    entry.longest_streak = bestStreaks.get(key) || 0;
+    entry.total_points =
+      entry.timeline.length > 0 ? entry.timeline[entry.timeline.length - 1].totalPoints : 0;
+  }
+
+  const finalEntries = [...orderedEntries].sort(
+    (a, b) => b.total_points - a.total_points || a.name.localeCompare(b.name, "sv")
+  );
+
+  function createCard(
+    title: string,
+    selector: (entry: StatisticsEntry) => number,
+    description: string
+  ): StatisticsCard {
+    const maxValue = finalEntries.reduce(
+      (max, entry) => Math.max(max, selector(entry)),
+      0
+    );
+    const leaders = finalEntries
+      .filter((entry) => selector(entry) === maxValue)
+      .map((entry) => entry.name);
+
+    return {
+      title,
+      value: maxValue,
+      leaders,
+      description,
+    };
+  }
+
+  const cards: StatisticsCard[] = [
+    createCard("Flest 10:or", (entry) => entry.ten_count, "Flest exakta resultat."),
+    createCard(
+      "Flest rätt tecken",
+      (entry) => entry.correct_outcome_count,
+      "Flest matcher med rätt vinnare eller kryss."
+    ),
+    createCard(
+      "Längsta poängsvit",
+      (entry) => entry.longest_streak,
+      "Flest raka matcher med poäng."
+    ),
+    createCard(
+      "Skrällkännaren",
+      (entry) => entry.upset_points,
+      "Flest poäng i matcher där majoriteten fick 0 poäng."
+    ),
+  ];
+
+  const upsetCard = cards.find((card) => card.title === "Skrällkännaren");
+  if (upsetCard) {
+    upsetCard.leaderDetails = finalEntries
+      .filter((entry) => entry.upset_points === upsetCard.value)
+      .map((entry) => {
+        const key = `${entry.user_id}-${entry.prediction_set}`;
+        const matches = (upsetMatchesByEntry.get(key) || [])
+          .map((match) => `${match.label} (${match.points} p)`)
+          .join(", ");
+
+        return {
+          name: entry.name,
+          detail: matches || "Ingen enskild skrällmatch registrerad",
+        };
+      });
+  }
+
+  const topTenCard = cards.find((card) => card.title === "Flest 10:or");
+  if (topTenCard) {
+    topTenCard.leaderDetails = finalEntries
+      .filter((entry) => entry.ten_count > 0)
+      .sort(
+        (a, b) => b.ten_count - a.ten_count || a.name.localeCompare(b.name, "sv")
+      )
+      .slice(0, 5)
+      .map((entry) => ({
+        name: entry.name,
+        detail: `${entry.ten_count} st`,
+      }));
+  }
+
+  const correctOutcomeCard = cards.find((card) => card.title === "Flest rätt tecken");
+  if (correctOutcomeCard) {
+    correctOutcomeCard.leaderDetails = finalEntries
+      .filter((entry) => entry.correct_outcome_count > 0)
+      .sort(
+        (a, b) =>
+          b.correct_outcome_count - a.correct_outcome_count ||
+          a.name.localeCompare(b.name, "sv")
+      )
+      .slice(0, 5)
+      .map((entry) => ({
+        name: entry.name,
+        detail: `${entry.correct_outcome_count} st`,
+      }));
+  }
+
+  return {
+    timelineMatches,
+    entries: finalEntries,
+    cards,
+  };
+}
+
 type TournamentInfoMatch = {
   id: number;
   group_name: string;
