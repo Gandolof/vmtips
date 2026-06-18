@@ -23,6 +23,7 @@ if (!fs.existsSync(dbDir)) {
 export const db = new Database(dbPath);
 
 let initialized = false;
+const shouldSkipModuleInit = process.env.NEXT_PHASE === "phase-production-build";
 
 function ensureUsersTableSupportsPaidFlag() {
   const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{
@@ -211,4 +212,8 @@ export function ensureDbInitialized() {
   initialized = true;
 }
 
-ensureDbInitialized();
+// Avoid running schema initialization during `next build`, where many
+// parallel workers can import this module and race on SQLite migrations.
+if (!shouldSkipModuleInit) {
+  ensureDbInitialized();
+}
